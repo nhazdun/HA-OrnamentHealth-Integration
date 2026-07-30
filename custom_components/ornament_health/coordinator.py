@@ -37,6 +37,7 @@ STORAGE_VERSION = 1
 # Keep at most this many significant digits after converting between units, so a
 # 12.21 ng/mL reading does not surface as 12.209999999999999.
 SIGNIFICANT_DIGITS = 10
+REFERENCE_DIGITS = 4
 
 type OrnamentConfigEntry = ConfigEntry[OrnamentCoordinator]
 
@@ -230,10 +231,21 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
                 biomarker_id = int(item["id"])
             except (KeyError, TypeError, ValueError):
                 continue
-            entries = sorted(
-                (entry for entry in item.get("entries") or [] if entry.get("date")),
-                key=lambda entry: entry["date"],
-            )
+            # Ornament returns entries newest first, and a single lab report can
+            # carry two readings of one biomarker with the same timestamp (a
+            # result and its control value). Sorting oldest first while reversing
+            # ties keeps the reading Ornament treats as current at the end.
+            entries = [
+                entry
+                for _, entry in sorted(
+                    enumerate(
+                        entry
+                        for entry in item.get("entries") or []
+                        if entry.get("date")
+                    ),
+                    key=lambda pair: (pair[1]["date"], -pair[0]),
+                )
+            ]
             if not entries:
                 continue
 
@@ -343,10 +355,15 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
         except (TypeError, ValueError):
             return None, None
         if factor:
-            low, high = cls._round(low / factor), cls._round(high / factor)
+            # Ornament derives its canonical ranges with slightly different
+            # factors than it publishes, so dividing back leaves noise such as
+            # 35.00458 for a 35 g/L limit. Reference ranges are guide rails,
+            # never that precise, so keep four significant digits.
+            low = cls._round(low / factor, REFERENCE_DIGITS)
+            high = cls._round(high / factor, REFERENCE_DIGITS)
         return low, high
 
     @staticmethod
-    def _round(value: float) -> float:
+    def _round(value: float, digits: int = SIGNIFICANT_DIGITS) -> float:
         """Drop floating point noise introduced by unit conversion."""
-        return float(f"%.{SIGNIFICANT_DIGITS}g" % value)
+        return float(f"%.{digits}g" % value)
