@@ -231,9 +231,16 @@ CATEGORIES_PAYLOAD: list[dict[str, Any]] = [
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    """Load custom integrations in every test."""
-    return
+def auto_enable_custom_integrations(request: pytest.FixtureRequest) -> None:
+    """Load custom integrations in every test.
+
+    The recorder fixtures insist on being set up before Home Assistant exists,
+    so a test that asks for them has to get them first - this fixture runs
+    before the test's own arguments are resolved.
+    """
+    if "recorder_mock" in request.fixturenames:
+        request.getfixturevalue("recorder_mock")
+    request.getfixturevalue("enable_custom_integrations")
 
 
 @pytest.fixture
