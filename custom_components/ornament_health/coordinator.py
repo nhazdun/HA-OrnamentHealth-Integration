@@ -38,10 +38,11 @@ from .statistics import async_clear_statistics
 _LOGGER = logging.getLogger(__name__)
 
 STORAGE_VERSION = 1
-# Bumped whenever the cached dictionary gains a field. A cache written by an
-# older version is simply refetched rather than migrated - it is a copy of a
+# Bumped whenever the cached dictionary gains a field OR is filled differently -
+# borrowing synonyms counts, since an older cache holds the empty lists the API
+# returned. A stale cache is refetched rather than migrated: it is a copy of a
 # public dictionary, not user data.
-CACHE_SCHEMA = 2
+CACHE_SCHEMA = 3
 # Keep at most this many significant digits after converting between units, so a
 # 12.21 ng/mL reading does not surface as 12.209999999999999.
 SIGNIFICANT_DIGITS = 10
