@@ -204,6 +204,7 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
         )
         if definitions is not None:
             self.thesaurus.biomarkers = definitions
+            await self._async_borrow_synonyms()
         self.thesaurus.digest = new_digest
         # Ornament answers with an empty list for a language it has no catalogue
         # for - Ukrainian being one - so fall back rather than end up with
@@ -256,6 +257,29 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
                 }
             )
             self.extra_names[language] = names
+
+    async def _async_borrow_synonyms(self) -> None:
+        """Take synonyms from the English dictionary when a language has none.
+
+        Ornament lists synonyms for English, Russian and German but leaves them
+        empty for others, and they are the only place a bare abbreviation like
+        ALT is spelled out as "Alanine aminotransferase".
+        """
+        if self.language == DEFAULT_LANGUAGE:
+            return
+        if any(item.synonyms for item in self.thesaurus.biomarkers.values()):
+            return
+
+        try:
+            english, _ = await self.client.async_get_thesaurus(DEFAULT_LANGUAGE)
+        except OrnamentApiError as err:
+            _LOGGER.debug("Could not borrow synonyms: %s", err)
+            return
+        if not english:
+            return
+        for biomarker_id, definition in self.thesaurus.biomarkers.items():
+            if (source := english.get(biomarker_id)) is not None:
+                definition.synonyms = source.synonyms
 
     async def _async_load_bundled(self, language: str) -> dict[str, dict[str, str]]:
         """Read the catalogue this integration ships for a language, if any."""
