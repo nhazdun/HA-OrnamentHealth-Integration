@@ -29,6 +29,7 @@ from .const import (
     DOMAIN,
 )
 from .model import Biomarker, Measurement, OrnamentData, Submission
+from .statistics import async_clear_statistics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,9 +68,11 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
             CONF_LANGUAGE, entry.data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)
         )
         self.thesaurus = Thesaurus()
-        # Sensors register a coroutine here so the import_history service can
-        # re-run the statistics backfill for every entity at once.
+        # Sensors register a coroutine here so a resync can re-run the
+        # statistics backfill for every entity at once, and add their entity_id
+        # so the old statistics can be cleared first.
         self.history_importers: list[Callable[..., Awaitable[None]]] = []
+        self.statistic_ids: set[str] = set()
         self._store: Store[dict[str, Any]] = Store(
             hass, STORAGE_VERSION, f"{DOMAIN}.thesaurus.{self.language}"
         )
@@ -78,6 +81,23 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
     async def _async_setup(self) -> None:
         """Load the static dictionaries once before the first refresh."""
         await self._async_load_thesaurus_cache()
+
+    async def async_resync(self, *, clear: bool) -> None:
+        """Re-read everything from Ornament and rebuild the history.
+
+        With clear set, the stored statistics are discarded first, so a run
+        recovers from bad data rather than merging on top of it.
+        """
+        if clear:
+            async_clear_statistics(self.hass, sorted(self.statistic_ids))
+            # Force the dictionary to be fetched again rather than trusting the
+            # cached digest, in case a biomarker was renamed upstream.
+            self.thesaurus.digest = None
+            self._thesaurus_loaded = False
+
+        await self.async_refresh()
+        for import_history in list(self.history_importers):
+            await import_history(force=True)
 
     async def _async_load_thesaurus_cache(self) -> None:
         """Restore the cached biomarker dictionary from disk."""

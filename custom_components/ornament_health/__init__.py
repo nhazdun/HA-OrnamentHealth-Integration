@@ -12,19 +12,23 @@ from homeassistant.helpers import device_registry
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import OrnamentClient
+from .config_flow import scan_interval_minutes
 from .const import (
-    CONF_SCAN_INTERVAL_HOURS,
     CONF_TOKEN,
-    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     SERVICE_IMPORT_HISTORY,
+    SERVICE_RESYNC,
 )
 from .coordinator import OrnamentConfigEntry, OrnamentCoordinator
 from .entity import profile_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.SENSOR,
+]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -34,11 +38,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrnamentConfigEntry) -> 
     client = OrnamentClient(async_get_clientsession(hass), entry.data[CONF_TOKEN])
     coordinator = OrnamentCoordinator(hass, entry, client)
 
-    interval_hours = entry.options.get(CONF_SCAN_INTERVAL_HOURS)
-    if interval_hours:
-        coordinator.update_interval = timedelta(hours=int(interval_hours))
-    else:
-        coordinator.update_interval = DEFAULT_SCAN_INTERVAL
+    coordinator.update_interval = timedelta(
+        minutes=scan_interval_minutes(entry.options)
+    )
 
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
@@ -74,17 +76,22 @@ def _async_register_services(hass: HomeAssistant) -> None:
     if hass.services.has_service(DOMAIN, SERVICE_IMPORT_HISTORY):
         return
 
-    async def _async_import_history(call: ServiceCall) -> None:
-        """Re-import every biomarker's history into long-term statistics."""
-        entries: list[OrnamentConfigEntry] = [
-            entry
+    def _loaded_coordinators() -> list[OrnamentCoordinator]:
+        return [
+            entry.runtime_data
             for entry in hass.config_entries.async_loaded_entries(DOMAIN)
             if hasattr(entry, "runtime_data")
         ]
-        for entry in entries:
-            coordinator = entry.runtime_data
-            await coordinator.async_request_refresh()
-            for callback_fn in list(coordinator.history_importers):
-                await callback_fn(force=True)
+
+    async def _async_import_history(call: ServiceCall) -> None:
+        """Re-import every biomarker's history into long-term statistics."""
+        for coordinator in _loaded_coordinators():
+            await coordinator.async_resync(clear=False)
+
+    async def _async_resync(call: ServiceCall) -> None:
+        """Discard the imported history and build it again from scratch."""
+        for coordinator in _loaded_coordinators():
+            await coordinator.async_resync(clear=True)
 
     hass.services.async_register(DOMAIN, SERVICE_IMPORT_HISTORY, _async_import_history)
+    hass.services.async_register(DOMAIN, SERVICE_RESYNC, _async_resync)

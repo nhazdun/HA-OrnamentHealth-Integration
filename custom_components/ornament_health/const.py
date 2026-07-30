@@ -18,9 +18,13 @@ CONF_LANGUAGE: Final = "language"
 CONF_IMPORT_HISTORY: Final = "import_history"
 CONF_HISTORY_ATTRIBUTE_LIMIT: Final = "history_attribute_limit"
 CONF_SCAN_INTERVAL_HOURS: Final = "scan_interval_hours"
+CONF_SCAN_INTERVAL_MINUTES: Final = "scan_interval_minutes"
 
 DEFAULT_LANGUAGE: Final = "en"
-DEFAULT_SCAN_INTERVAL: Final = timedelta(hours=1)
+DEFAULT_SCAN_INTERVAL_MINUTES: Final = 60
+DEFAULT_SCAN_INTERVAL: Final = timedelta(minutes=DEFAULT_SCAN_INTERVAL_MINUTES)
+MIN_SCAN_INTERVAL_MINUTES: Final = 15
+MAX_SCAN_INTERVAL_MINUTES: Final = 10080  # one week
 DEFAULT_IMPORT_HISTORY: Final = True
 DEFAULT_HISTORY_ATTRIBUTE_LIMIT: Final = 20
 
@@ -49,4 +53,5 @@ ATTR_TREND: Final = "trend"
 ATTR_HISTORY: Final = "history"
 
 SERVICE_IMPORT_HISTORY: Final = "import_history"
+SERVICE_RESYNC: Final = "resync"
 SERVICE_REFRESH: Final = "refresh"

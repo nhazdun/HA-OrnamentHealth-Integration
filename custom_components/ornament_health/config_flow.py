@@ -37,12 +37,15 @@ from .const import (
     CONF_PROFILE_ID,
     CONF_PROFILE_NAME,
     CONF_SCAN_INTERVAL_HOURS,
+    CONF_SCAN_INTERVAL_MINUTES,
     CONF_TOKEN,
     DEFAULT_HISTORY_ATTRIBUTE_LIMIT,
     DEFAULT_IMPORT_HISTORY,
     DEFAULT_LANGUAGE,
-    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
+    MAX_SCAN_INTERVAL_MINUTES,
+    MIN_SCAN_INTERVAL_MINUTES,
     SUPPORTED_LANGUAGES,
 )
 
@@ -55,6 +58,17 @@ TOKEN_SCHEMA = vol.Schema(
         )
     }
 )
+
+
+def scan_interval_minutes(options: Mapping[str, Any]) -> int:
+    """Return the poll interval in minutes, honouring the older hours option."""
+    minutes = options.get(CONF_SCAN_INTERVAL_MINUTES)
+    if minutes:
+        return int(minutes)
+    hours = options.get(CONF_SCAN_INTERVAL_HOURS)
+    if hours:
+        return int(hours) * 60
+    return DEFAULT_SCAN_INTERVAL_MINUTES
 
 
 def _profile_label(profile: Profile) -> str:
@@ -194,14 +208,15 @@ class OrnamentOptionsFlow(OptionsFlow):
         schema = vol.Schema(
             {
                 vol.Required(
-                    CONF_SCAN_INTERVAL_HOURS,
-                    default=options.get(
-                        CONF_SCAN_INTERVAL_HOURS,
-                        int(DEFAULT_SCAN_INTERVAL.total_seconds() // 3600),
-                    ),
+                    CONF_SCAN_INTERVAL_MINUTES,
+                    default=scan_interval_minutes(options),
                 ): NumberSelector(
                     NumberSelectorConfig(
-                        min=1, max=168, step=1, mode=NumberSelectorMode.BOX
+                        min=MIN_SCAN_INTERVAL_MINUTES,
+                        max=MAX_SCAN_INTERVAL_MINUTES,
+                        step=5,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement="min",
                     )
                 ),
                 vol.Required(

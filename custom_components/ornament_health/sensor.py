@@ -196,6 +196,12 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
         self.async_on_remove(
             lambda: self.coordinator.history_importers.remove(self.async_import_history)
         )
+        biomarker = self._biomarker
+        if biomarker is not None and not biomarker.is_qualitative:
+            self.coordinator.statistic_ids.add(self.entity_id)
+            self.async_on_remove(
+                lambda: self.coordinator.statistic_ids.discard(self.entity_id)
+            )
         await self.async_import_history()
 
     @callback
@@ -224,6 +230,9 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
         latest = biomarker.measurements[-1].timestamp
         if not force and self._imported_through == latest:
             return
+        if force:
+            # A resync may have wiped the stored statistics, so never skip.
+            self._imported_through = None
 
         await async_import_measurements(
             self.hass, self.entity_id, biomarker.unit, biomarker.measurements

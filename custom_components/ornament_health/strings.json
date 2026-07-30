@@ -42,14 +42,15 @@
       "init": {
         "title": "Ornament Health options",
         "data": {
-          "scan_interval_hours": "Update interval (hours)",
+          "scan_interval_minutes": "Update interval (minutes)",
           "import_history": "Import measurement history into long-term statistics",
           "history_attribute_limit": "Measurements kept in the history attribute",
           "language": "Biomarker name language"
         },
         "data_description": {
           "import_history": "Backfills past lab results so history graphs show every measurement, not just the ones recorded since installation.",
-          "history_attribute_limit": "Set to 0 to leave the history attribute out entirely."
+          "history_attribute_limit": "Set to 0 to leave the history attribute out entirely.",
+          "scan_interval_minutes": "How often to check Ornament for new lab results. Minimum 15 minutes."
         }
       }
     }
@@ -58,17 +59,39 @@
     "import_history": {
       "name": "Import history",
       "description": "Refreshes data from Ornament and re-imports every biomarker measurement into long-term statistics."
+    },
+    "resync": {
+      "name": "Resync everything",
+      "description": "Deletes the imported measurement history and rebuilds it from Ornament. Use when the data looks wrong."
     }
   },
   "entity": {
     "sensor": {
-      "biomarker_count": { "name": "Biomarkers tracked" },
-      "abnormal_count": { "name": "Abnormal biomarkers" },
-      "last_report": { "name": "Last lab report" },
-      "last_laboratory": { "name": "Last laboratory" }
+      "biomarker_count": {
+        "name": "Biomarkers tracked"
+      },
+      "abnormal_count": {
+        "name": "Abnormal biomarkers"
+      },
+      "last_report": {
+        "name": "Last lab report"
+      },
+      "last_laboratory": {
+        "name": "Last laboratory"
+      }
     },
     "binary_sensor": {
-      "abnormal": { "name": "Abnormal results" }
+      "abnormal": {
+        "name": "Abnormal results"
+      }
+    },
+    "button": {
+      "sync": {
+        "name": "Sync now"
+      },
+      "resync": {
+        "name": "Resync all data"
+      }
     }
   }
 }

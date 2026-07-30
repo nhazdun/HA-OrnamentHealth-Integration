@@ -14,7 +14,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.util import dt as dt_util
 
 if TYPE_CHECKING:
@@ -28,6 +28,22 @@ RECORDER_DOMAIN = "recorder"
 def async_recorder_available(hass: HomeAssistant) -> bool:
     """Return whether the recorder is loaded and can accept statistics."""
     return RECORDER_DOMAIN in hass.config.components
+
+
+@callback
+def async_clear_statistics(hass: HomeAssistant, statistic_ids: list[str]) -> None:
+    """Drop every stored statistic for these entities.
+
+    The recorder runs one queue, so a re-import queued straight after this is
+    guaranteed to land on an empty slate.
+    """
+    if not statistic_ids or not async_recorder_available(hass):
+        return
+
+    from homeassistant.components.recorder import get_instance
+
+    get_instance(hass).async_clear_statistics(statistic_ids)
+    _LOGGER.debug("Cleared statistics for %s entities", len(statistic_ids))
 
 
 def _build_metadata(statistic_id: str, unit: str | None) -> dict[str, Any]:
