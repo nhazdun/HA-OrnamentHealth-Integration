@@ -11,7 +11,7 @@
  *   type: custom:ornament-biomarker-table
  */
 
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.2.0";
 
 const TEXT = {
   search: "Пошук біомаркера…",
@@ -80,6 +80,21 @@ function formatNumber(value, locale) {
   const magnitude = Math.abs(value);
   const digits = magnitude >= 100 ? 1 : magnitude >= 10 ? 2 : 3;
   return value.toLocaleString(locale, { maximumFractionDigits: digits });
+}
+
+/**
+ * Ornament files dimensionless ratios — HOMA-IR, INR, urine specific gravity,
+ * signal/cutoff coefficients — under a unit titled "×100%", meaning "multiply
+ * by a hundred for a percentage". That is a note about the scale, not a unit
+ * the value carries. The integration drops it in Thesaurus.unit_title(); this
+ * keeps installs running an older version from printing it beside the value.
+ * Real multiplier units such as "×10⁹/L" name a quantity and are kept.
+ */
+const RATIO_NOTATION = /^[×xX]\s*\d+\s*%$/;
+
+function displayUnit(unit) {
+  if (!unit) return "";
+  return RATIO_NOTATION.test(unit.trim()) ? "" : unit;
 }
 
 function escapeHtml(value) {
@@ -160,14 +175,25 @@ function sparkline(values, { band, step = false, width = 116, height = 30 }) {
   );
 }
 
-/** Render the min ... marker ... max range strip. */
+/**
+ * Render the min ... marker ... max range strip.
+ *
+ * The axis is the reference range, so a value outside it has nowhere to sit. It
+ * would be a lie to park the marker on the bound it just broke, so an
+ * out-of-range value gets a solid marker, a chevron pointing past the end of
+ * the strip, and the bound it exceeded picked out in the status colour.
+ */
 function rangeStrip(row) {
   const { referenceMin: min, referenceMax: max } = row;
   if (min == null || max == null || max <= min || typeof row.value !== "number") {
     return '<span class="muted">—</span>';
   }
 
-  const pos = Math.min(100, Math.max(0, ((row.value - min) / (max - min)) * 100));
+  const share = ((row.value - min) / (max - min)) * 100;
+  const pos = Math.min(100, Math.max(0, share));
+  const above = share > 100;
+  const below = share < 0;
+
   const { optimalMin: oMin, optimalMax: oMax } = row;
   let optimal = "";
   if (oMin != null && oMax != null && oMax > oMin) {
@@ -180,11 +206,25 @@ function rangeStrip(row) {
     }
   }
 
+  // The marker is 11px wide; inset it by its own width so that at either end it
+  // stops flush with the track instead of spilling over the bound label.
+  const marker =
+    `<span class="marker${above || below ? " out" : ""}" ` +
+    `style="left:calc(${pos.toFixed(1)}% - ${(pos * 0.11).toFixed(2)}px)"></span>`;
+
+  const lowLabel =
+    `<span class="bound${below ? " exceeded" : ""}">` +
+    `${escapeHtml(row.minLabel)}</span>`;
+  const highLabel =
+    `<span class="bound${above ? " exceeded" : ""}">` +
+    `${escapeHtml(row.maxLabel)}</span>`;
+
   return (
-    `<span class="bound">${escapeHtml(row.minLabel)}</span>` +
-    `<span class="track">${optimal}` +
-    `<span class="marker" style="left:${pos.toFixed(1)}%"></span></span>` +
-    `<span class="bound">${escapeHtml(row.maxLabel)}</span>`
+    lowLabel +
+    (below ? '<span class="beyond">‹</span>' : "") +
+    `<span class="track">${optimal}${marker}</span>` +
+    (above ? '<span class="beyond">›</span>' : "") +
+    highLabel
   );
 }
 
@@ -341,6 +381,14 @@ const STYLES = `
 
   .range { display: flex; align-items: center; gap: 8px; min-width: 168px; }
   .bound { font-size: 11px; color: var(--secondary-text-color); white-space: nowrap; }
+  .bound.exceeded { color: var(--st); font-weight: 600; }
+  .beyond {
+    margin: 0 -4px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--st);
+  }
   .track {
     position: relative;
     flex: 1;
@@ -362,13 +410,13 @@ const STYLES = `
     top: 50%;
     width: 11px;
     height: 11px;
-    margin-left: -5.5px;
     border: 2px solid var(--st, var(--primary-color));
     border-radius: 50%;
     background: var(--card-background-color);
     transform: translateY(-50%);
     box-sizing: border-box;
   }
+  .track .marker.out { background: var(--st, var(--primary-color)); }
 
   .chart { display: flex; align-items: center; gap: 8px; min-width: 158px; }
   .spark { display: block; overflow: visible; }
@@ -498,7 +546,7 @@ class OrnamentBiomarkerTable extends HTMLElement {
         value,
         valueLabel:
           typeof value === "number" ? formatNumber(value, locale) : String(value),
-        unit: isQualitative ? "" : attrs.unit_of_measurement || "",
+        unit: isQualitative ? "" : displayUnit(attrs.unit_of_measurement),
         isQualitative,
         referenceMin: attrs.reference_min ?? null,
         referenceMax: attrs.reference_max ?? null,
@@ -519,7 +567,7 @@ class OrnamentBiomarkerTable extends HTMLElement {
     if (!this._hass || !this._config) return;
     const rows = this._collect();
     const signature = rows
-      .map((row) => `${row.entityId}:${row.valueLabel}:${row.measuredAt}`)
+      .map((row) => `${row.entityId}:${row.valueLabel}:${row.unit}:${row.measuredAt}`)
       .join("|");
     if (signature === this._signature && this._shell) return;
     this._signature = signature;

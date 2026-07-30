@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -24,6 +25,13 @@ PATH_BIOMARKER_CATEGORIES = "/thesaurus-api/public/v1.0/biomarker-categories"
 
 # Qualitative units spell their outcomes out in the title, e.g. "Negative|Positive".
 QUALITATIVE_SEPARATOR = "|"
+
+# Ornament files dimensionless ratios — HOMA-IR, INR, urine specific gravity,
+# signal/cutoff coefficients — under a unit titled "×100%", meaning "multiply by
+# a hundred for a percentage". That is a note about the scale, not a unit the
+# value carries, so those biomarkers are reported without one. Real multiplier
+# units such as "×10⁹/L" name a quantity and are left alone.
+RATIO_NOTATION = re.compile(r"^[×xX]\s*\d+\s*%$")
 
 
 class OrnamentApiError(Exception):
@@ -89,12 +97,16 @@ class Thesaurus:
         return f"Biomarker {biomarker_id}"
 
     def unit_title(self, unit_id: int | None) -> str | None:
-        """Return the unit symbol for a unit id, or None for qualitative ones."""
+        """Return the unit symbol for a unit id, or None when it is not a unit."""
         if unit_id is None:
             return None
         title = self.units.get(unit_id)
-        if title and QUALITATIVE_SEPARATOR in title:
+        if not title:
+            return title
+        if QUALITATIVE_SEPARATOR in title:
             # "Undetected|Detected" names the two outcomes, it is not a unit.
+            return None
+        if RATIO_NOTATION.match(title.strip()):
             return None
         return title
 
