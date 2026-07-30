@@ -157,7 +157,7 @@ Gaps between lab visits appear as gaps in the graph, which is honest: no values 
 
 ## Icon
 
-Home Assistant loads integration icons from [home-assistant/brands](https://github.com/home-assistant/brands), not from this repository, so the artwork is kept in [`brands/`](brands/custom_integrations/ornament_health) ready to submit: copy `custom_integrations/ornament_health/` into a fork of that repo and open a pull request. Until it is merged, Home Assistant shows the default placeholder.
+The integration ships its own artwork in [`custom_components/ornament_health/brand/`](custom_components/ornament_health/brand). Home Assistant 2026.3 and newer serves brand images straight from the integration, taking priority over the brands CDN, so nothing else is needed. On older versions the default placeholder is shown.
 
 ## Notes and limitations
 
