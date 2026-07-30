@@ -299,6 +299,7 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
                 title=self.thesaurus.biomarker_title(biomarker_id),
                 unit=None if is_unitless else self.thesaurus.unit_title(target_unit_id),
                 category=self.thesaurus.category_title(category_id),
+                category_id=category_id,
                 status=item.get("status"),
                 measurements=measurements,
                 reference_min=common[0],

@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.components.recorder import Recorder
 from homeassistant.components.recorder.statistics import statistics_during_period
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import (
@@ -15,7 +15,7 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 
 from custom_components.ornament_health.const import DOMAIN
 
-from .conftest import DATE_NEW, DATE_OLD
+from .conftest import DATE_NEW, DATE_OLD, PROFILE_ID
 
 
 async def _setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
@@ -176,18 +176,68 @@ async def test_profile_level_sensors(
     )
 
 
-async def test_entities_are_registered_to_one_device(
+async def test_biomarkers_are_grouped_into_category_devices(
     hass: HomeAssistant,
     mock_api: AiohttpClientMocker,
     config_entry: MockConfigEntry,
 ) -> None:
-    """All entities belong to the device representing the person."""
+    """Each lab panel is its own device, hanging off the profile."""
     await _setup(hass, config_entry)
 
-    registry = er.async_get(hass)
-    entries = er.async_entries_for_config_entry(registry, config_entry.entry_id)
+    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
+    entries = er.async_entries_for_config_entry(entity_registry, config_entry.entry_id)
     assert len(entries) == 10  # 5 biomarkers + 4 diagnostics + 1 binary sensor
-    assert len({entry.device_id for entry in entries}) == 1
+
+    profile_device = device_registry.async_get_device(
+        identifiers={(DOMAIN, PROFILE_ID)}
+    )
+    assert profile_device is not None
+
+    # Vitamins, Anemia and Urine, each linked back to the profile.
+    panels = [
+        device
+        for device in dr.async_entries_for_config_entry(
+            device_registry, config_entry.entry_id
+        )
+        if device.id != profile_device.id
+    ]
+    assert {device.name for device in panels} == {
+        "Ornament Test Person Vitamins",
+        "Ornament Test Person Anemia",
+        "Ornament Test Person Urine",
+    }
+    assert all(device.via_device_id == profile_device.id for device in panels)
+
+    vitamin_d = entity_registry.async_get(
+        "sensor.ornament_test_person_vitamin_d_25_hydroxy"
+    )
+    assert (
+        device_registry.async_get(vitamin_d.device_id).name
+        == "Ornament Test Person Vitamins"
+    )
+
+    # Profile-level sensors stay on the profile device itself.
+    tracked = entity_registry.async_get(
+        "sensor.ornament_test_person_biomarkers_tracked"
+    )
+    assert tracked.device_id == profile_device.id
+
+
+async def test_reference_ranges_are_numeric(
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Reference bounds are numbers, usable in templates and charts."""
+    await _setup(hass, config_entry)
+
+    attributes = hass.states.get(
+        "sensor.ornament_test_person_vitamin_d_25_hydroxy"
+    ).attributes
+    for key in ("reference_min", "reference_max", "optimal_min", "optimal_max"):
+        assert isinstance(attributes[key], (int, float))
+        assert not isinstance(attributes[key], bool)
 
 
 async def test_history_imported_into_statistics(

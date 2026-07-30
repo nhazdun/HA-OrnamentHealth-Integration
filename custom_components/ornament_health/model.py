@@ -24,6 +24,7 @@ class Biomarker:
     title: str
     unit: str | None
     category: str | None
+    category_id: int | None
     status: str | None
     measurements: list[Measurement] = field(default_factory=list)
     reference_min: float | None = None

@@ -94,10 +94,15 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
 
     def __init__(self, coordinator: OrnamentCoordinator, biomarker_id: int) -> None:
         """Initialise the biomarker sensor."""
-        super().__init__(coordinator, f"biomarker_{biomarker_id}")
+        biomarker = coordinator.data.biomarkers.get(biomarker_id)
+        super().__init__(
+            coordinator,
+            f"biomarker_{biomarker_id}",
+            category=biomarker.category if biomarker else None,
+            category_id=biomarker.category_id if biomarker else None,
+        )
         self._biomarker_id = biomarker_id
         self._imported_through: datetime | None = None
-        biomarker = self._biomarker
         if biomarker is not None:
             self._attr_name = biomarker.title
             if biomarker.is_qualitative:
