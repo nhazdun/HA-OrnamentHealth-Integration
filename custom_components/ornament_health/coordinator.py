@@ -261,17 +261,20 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
             target_unit_id = entries[-1].get("originalUnitId")
             factor = self._unit_factor(definition, target_unit_id, entries)
 
-            measurements: list[Measurement] = []
+            # Uploading the same lab report twice leaves two entries with one
+            # timestamp, and a report can also pair a result with its control
+            # value. Keeping one reading per instant stops the duplicate from
+            # becoming the "previous" value and flattening the trend.
+            by_timestamp: dict[int, Measurement] = {}
             for entry in entries:
                 value = self._entry_value(entry, target_unit_id, factor)
                 if value is None:
                     continue
-                measurements.append(
-                    Measurement(
-                        timestamp=dt_util.utc_from_timestamp(entry["date"]),
-                        value=value,
-                    )
+                by_timestamp[entry["date"]] = Measurement(
+                    timestamp=dt_util.utc_from_timestamp(entry["date"]),
+                    value=value,
                 )
+            measurements = [by_timestamp[key] for key in sorted(by_timestamp)]
             if not measurements:
                 continue
 

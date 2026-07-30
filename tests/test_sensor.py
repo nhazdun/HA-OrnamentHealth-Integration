@@ -91,6 +91,22 @@ async def test_unitless_biomarker(
     assert "unit_of_measurement" not in state.attributes
 
 
+async def test_duplicate_timestamps_collapse_to_current_reading(
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+    config_entry: MockConfigEntry,
+) -> None:
+    """One reading per instant, and it is the one Ornament lists first."""
+    await _setup(hass, config_entry)
+
+    state = hass.states.get("sensor.ornament_test_person_prothrombin_time")
+    assert state.state == "11.5"
+    assert state.attributes["measurement_count"] == 2
+    assert [point["value"] for point in state.attributes["history"]] == [10.4, 11.5]
+    assert state.attributes["previous_value"] == 10.4
+    assert state.attributes["trend"] == "up"
+
+
 async def test_profile_level_sensors(
     hass: HomeAssistant,
     mock_api: AiohttpClientMocker,
@@ -99,7 +115,7 @@ async def test_profile_level_sensors(
     """Diagnostic sensors summarise the profile."""
     await _setup(hass, config_entry)
 
-    assert hass.states.get("sensor.ornament_test_person_biomarkers_tracked").state == "3"
+    assert hass.states.get("sensor.ornament_test_person_biomarkers_tracked").state == "4"
     assert hass.states.get("sensor.ornament_test_person_abnormal_biomarkers").state == "1"
     assert (
         hass.states.get("sensor.ornament_test_person_last_laboratory").state
@@ -121,7 +137,7 @@ async def test_entities_are_registered_to_one_device(
 
     registry = er.async_get(hass)
     entries = er.async_entries_for_config_entry(registry, config_entry.entry_id)
-    assert len(entries) == 8  # 3 biomarkers + 4 diagnostics + 1 binary sensor
+    assert len(entries) == 9  # 4 biomarkers + 4 diagnostics + 1 binary sensor
     assert len({entry.device_id for entry in entries}) == 1
 
 

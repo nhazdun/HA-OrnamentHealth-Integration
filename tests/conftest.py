@@ -55,7 +55,7 @@ PROFILES_PAYLOAD: list[dict[str, Any]] = [
 
 # Biomarker 187 is stored canonically at 2.4773 per ng/mL, 337 is unitless.
 BIOMARKERS_PAYLOAD: dict[str, Any] = {
-    "total": 3,
+    "total": 4,
     "biomarkers": [
         {
             "id": 187,
@@ -122,12 +122,47 @@ BIOMARKERS_PAYLOAD: dict[str, Any] = {
                 }
             ],
         },
+        {
+            # The same report uploaded twice, plus a control value sharing the
+            # newest timestamp. Ornament lists its current reading first.
+            "id": 226,
+            "categoryId": 27,
+            "isUnitless": False,
+            "status": "N",
+            "entries": [
+                {
+                    "seid": "e8",
+                    "sid": "s2",
+                    "value": "11.5",
+                    "originalValue": "11.5",
+                    "date": DATE_NEW,
+                    "originalUnitId": 61,
+                },
+                {
+                    "seid": "e7",
+                    "sid": "s2",
+                    "value": "19.0",
+                    "originalValue": "19",
+                    "date": DATE_NEW,
+                    "originalUnitId": 61,
+                },
+                {
+                    "seid": "e6",
+                    "sid": "s1",
+                    "value": "10.4",
+                    "originalValue": "10.4",
+                    "date": DATE_OLD,
+                    "originalUnitId": 61,
+                },
+            ],
+        },
     ],
     "refs": {
         # Canonical range 49.55-198.2 is 20-80 ng/mL once divided by 2.4773.
         "187": {"common": [49.55, 198.2], "optimal": [], "paidOptimal": [74.32, 123.9]},
         "88": {"common": [0.08539, 0.8539], "optimal": [], "paidOptimal": []},
         "337": {"common": [5.0, 8.0], "optimal": [], "paidOptimal": []},
+        "226": {"common": [9.4, 12.5], "optimal": [], "paidOptimal": []},
     },
 }
 
@@ -171,6 +206,13 @@ THESAURUS_PAYLOAD: dict[str, Any] = {
             "isUnitless": True,
             "unitsFactors": [[1, 1.0]],
         },
+        {
+            "id": 226,
+            "title": "Prothrombin time",
+            "displayCategoryId": 27,
+            "isUnitless": False,
+            "unitsFactors": [[61, 1.0]],
+        },
     ],
 }
 
@@ -178,6 +220,7 @@ UNITS_PAYLOAD: list[dict[str, Any]] = [
     {"id": 1, "title": "%", "valueType": 1},
     {"id": 34, "title": "mcg/L", "valueType": 1},
     {"id": 56, "title": "ng/mL", "valueType": 1},
+    {"id": 61, "title": "s", "valueType": 1},
 ]
 
 CATEGORIES_PAYLOAD: list[dict[str, Any]] = [
