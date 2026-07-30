@@ -98,6 +98,23 @@ automation:
 
 `ornament_health.import_history` — re-fetches everything and re-imports all measurements into long-term statistics. The import is idempotent, so running it repeatedly is safe. Useful after restoring a backup or changing the history option.
 
+## Seeing the history
+
+Click any biomarker sensor and the more-info dialog graphs its full record. To put several on one dashboard card, use a statistics graph — it reads the long-term store, so it shows years, not days:
+
+```yaml
+type: statistics-graph
+title: Vitamin D
+entities:
+  - sensor.ornament_nazariy_vitamin_d_25_hydroxy
+stat_types:
+  - mean
+period: month
+days_to_show: 2000
+```
+
+Between lab visits the line holds its last value, because that is what the sensor reads until a new result arrives.
+
 ## How history works
 
 Home Assistant has two stores: **states** (short-lived, purged after `purge_keep_days`) and **long-term statistics** (hourly, kept forever). Only statistics accept timestamps in the past, so that is where the measurement history goes — each measurement lands in the hour it was actually taken. The sensors carry `state_class: measurement`, so Home Assistant's own graphs read those statistics and show the full record.
