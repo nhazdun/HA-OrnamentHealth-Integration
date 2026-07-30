@@ -182,20 +182,28 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
         if definitions is not None:
             self.thesaurus.biomarkers = definitions
         self.thesaurus.digest = new_digest
+        # Ornament answers with an empty list for a language it has no catalogue
+        # for - Ukrainian being one - so fall back rather than end up with
+        # unnamed panels and sensors that lost their unit.
         if not self.thesaurus.units:
-            self.thesaurus.units = await self.client.async_get_units(self.language)
-        if not self.thesaurus.categories:
-            self.thesaurus.categories = await self.client.async_get_categories(
-                self.language
+            self.thesaurus.units = await self._async_fetch_with_fallback(
+                self.client.async_get_units
             )
-            if not self.thesaurus.categories and self.language != DEFAULT_LANGUAGE:
-                # Ornament answers with an empty list for languages it has no
-                # catalogue for, which would leave every panel unnamed.
-                self.thesaurus.categories = await self.client.async_get_categories(
-                    DEFAULT_LANGUAGE
-                )
+        if not self.thesaurus.categories:
+            self.thesaurus.categories = await self._async_fetch_with_fallback(
+                self.client.async_get_categories
+            )
         await self._async_apply_bundled_translations()
         self._thesaurus_loaded = True
+
+    async def _async_fetch_with_fallback(
+        self, fetch: Callable[[str], Awaitable[dict[int, str]]]
+    ) -> dict[int, str]:
+        """Fetch a dictionary, retrying in English if the language has none."""
+        result = await fetch(self.language)
+        if not result and self.language != DEFAULT_LANGUAGE:
+            result = await fetch(DEFAULT_LANGUAGE)
+        return result
 
     async def _async_apply_bundled_translations(self) -> None:
         """Overlay names for languages Ornament does not translate itself.

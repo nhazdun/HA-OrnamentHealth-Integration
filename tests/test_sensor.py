@@ -21,7 +21,18 @@ from custom_components.ornament_health.const import (
     DOMAIN,
 )
 
-from .conftest import DATE_NEW, DATE_OLD, PROFILE_ID, TOKEN
+from .conftest import (
+    BIOMARKERS_PAYLOAD,
+    CATEGORIES_PAYLOAD,
+    DATE_NEW,
+    DATE_OLD,
+    PROFILE_ID,
+    PROFILES_PAYLOAD,
+    SUBMISSIONS_PAYLOAD,
+    THESAURUS_PAYLOAD,
+    TOKEN,
+    UNITS_PAYLOAD,
+)
 
 
 async def _setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
@@ -344,3 +355,59 @@ async def test_ukrainian_names_come_from_the_bundled_dictionary(
     assert coordinator.thesaurus.category_title(21) == "Вітаміни"
     # Anything the bundle does not cover keeps the name Ornament supplied.
     assert coordinator.thesaurus.biomarker_title(88) == "Феритин"
+
+
+async def test_units_fall_back_when_language_has_no_catalogue(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """An empty unit list for a language must not strip the sensors' units."""
+    base = "https://api.ornament.health"
+    aioclient_mock.get(
+        f"{base}/accounting-api/public/v1.0/healer/linked-profiles",
+        json=PROFILES_PAYLOAD,
+    )
+    aioclient_mock.get(
+        f"{base}/medical-data-api/public/v1.0/profile/biomarkers",
+        json=BIOMARKERS_PAYLOAD,
+    )
+    aioclient_mock.get(
+        f"{base}/medical-data-api/public/v1.0/profile/submissions",
+        json=SUBMISSIONS_PAYLOAD,
+    )
+    aioclient_mock.post(
+        f"{base}/thesaurus-api/public/v1.1/biomarkers", json=THESAURUS_PAYLOAD
+    )
+    # Ukrainian returns nothing; English is what actually has the catalogue.
+    aioclient_mock.get(
+        f"{base}/thesaurus-api/public/v1.1/measurement-units?lang=uk", json=[]
+    )
+    aioclient_mock.get(
+        f"{base}/thesaurus-api/public/v1.1/measurement-units?lang=en",
+        json=UNITS_PAYLOAD,
+    )
+    aioclient_mock.get(
+        f"{base}/thesaurus-api/public/v1.0/biomarker-categories?lang=uk", json=[]
+    )
+    aioclient_mock.get(
+        f"{base}/thesaurus-api/public/v1.0/biomarker-categories?lang=en",
+        json=CATEGORIES_PAYLOAD,
+    )
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Test Person",
+        unique_id="uk-units",
+        data={
+            CONF_TOKEN: TOKEN,
+            CONF_PROFILE_ID: PROFILE_ID,
+            CONF_PROFILE_NAME: "Test Person",
+        },
+        options={"language": "uk"},
+    )
+    entry.add_to_hass(hass)
+    await _setup(hass, entry)
+
+    vitamin_d = entry.runtime_data.data.biomarkers[187]
+    assert vitamin_d.unit == "ng/mL"
+    assert vitamin_d.category == "Вітаміни"
