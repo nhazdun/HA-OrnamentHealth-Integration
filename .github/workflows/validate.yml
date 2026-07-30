@@ -38,7 +38,18 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install -r requirements-test.txt
-      - run: pytest tests/ -v
+      - name: Run tests
+        run: |
+          set -o pipefail
+          pytest tests/ -v --tb=short 2>&1 | tee /tmp/pytest.log
+      - name: Publish results
+        if: always()
+        run: |
+          {
+            echo '```'
+            tail -150 /tmp/pytest.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   ruff:
     name: ruff
