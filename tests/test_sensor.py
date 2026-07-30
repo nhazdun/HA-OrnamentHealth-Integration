@@ -6,7 +6,6 @@ from homeassistant.components.recorder import Recorder
 from homeassistant.components.recorder.statistics import statistics_during_period
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import (
@@ -115,8 +114,12 @@ async def test_profile_level_sensors(
     """Diagnostic sensors summarise the profile."""
     await _setup(hass, config_entry)
 
-    assert hass.states.get("sensor.ornament_test_person_biomarkers_tracked").state == "4"
-    assert hass.states.get("sensor.ornament_test_person_abnormal_biomarkers").state == "1"
+    assert (
+        hass.states.get("sensor.ornament_test_person_biomarkers_tracked").state == "4"
+    )
+    assert (
+        hass.states.get("sensor.ornament_test_person_abnormal_biomarkers").state == "1"
+    )
     assert (
         hass.states.get("sensor.ornament_test_person_last_laboratory").state
         == "Test Lab"

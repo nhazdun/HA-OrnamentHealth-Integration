@@ -188,9 +188,7 @@ class OrnamentClient:
         body: dict[str, Any] = {"lang": language}
         if digest:
             body["digest"] = digest
-        payload = await self._request(
-            "POST", PATH_THESAURUS_BIOMARKERS, json_body=body
-        )
+        payload = await self._request("POST", PATH_THESAURUS_BIOMARKERS, json_body=body)
         if not isinstance(payload, dict):
             raise OrnamentApiError("Unexpected thesaurus payload")
 

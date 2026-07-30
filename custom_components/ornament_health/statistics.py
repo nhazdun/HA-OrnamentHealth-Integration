@@ -38,7 +38,7 @@ def _build_metadata(statistic_id: str, unit: str | None) -> dict[str, Any]:
     therefore taken from the running version's own definition: mean_type replaced
     has_mean in 2025.6, and unit_class arrived later still.
     """
-    from homeassistant.components.recorder.models import (  # noqa: PLC0415
+    from homeassistant.components.recorder.models import (
         StatisticMetaData,
     )
 
@@ -54,7 +54,7 @@ def _build_metadata(statistic_id: str, unit: str | None) -> dict[str, Any]:
     }
 
     if "mean_type" in supported:
-        from homeassistant.components.recorder.models import (  # noqa: PLC0415
+        from homeassistant.components.recorder.models import (
             StatisticMeanType,
         )
 
@@ -105,7 +105,7 @@ async def async_import_measurements(
     if not statistics:
         return 0
 
-    from homeassistant.components.recorder.statistics import (  # noqa: PLC0415
+    from homeassistant.components.recorder.statistics import (
         async_import_statistics,
     )
 

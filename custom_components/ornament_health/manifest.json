@@ -1,8 +1,8 @@
 {
   "domain": "ornament_health",
   "name": "Ornament Health",
-  "codeowners": ["@nhazdun"],
   "after_dependencies": ["recorder"],
+  "codeowners": ["@nhazdun"],
   "config_flow": true,
   "documentation": "https://github.com/nhazdun/HA-OrnamentHealth-Integration",
   "integration_type": "service",

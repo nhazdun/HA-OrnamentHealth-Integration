@@ -116,9 +116,7 @@ class OrnamentConfigFlow(ConfigFlow, domain=DOMAIN):
         """Step two: which person's biomarkers to import."""
         if user_input is not None:
             pid = user_input[CONF_PROFILE_ID]
-            profile = next(
-                (item for item in self._profiles if item.pid == pid), None
-            )
+            profile = next((item for item in self._profiles if item.pid == pid), None)
             await self.async_set_unique_id(pid)
             self._abort_if_unique_id_configured()
             name = profile.name if profile else pid
@@ -138,9 +136,7 @@ class OrnamentConfigFlow(ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 vol.Required(CONF_PROFILE_ID): SelectSelector(
-                    SelectSelectorConfig(
-                        options=options, mode=SelectSelectorMode.LIST
-                    )
+                    SelectSelectorConfig(options=options, mode=SelectSelectorMode.LIST)
                 )
             }
         )
