@@ -10,6 +10,7 @@ Pulls every biomarker from an [Ornament Health](https://ornament.health) profile
 - **Real history.** Lab results are dated when the blood was drawn, often years ago. Home Assistant normally records a sensor only from the moment it is created, so this integration writes every past measurement into long-term statistics. Open any biomarker and the graph shows the whole record, back to your first test.
 - **Reference ranges** for each biomarker as attributes (`reference_min`/`reference_max`, plus the optimal range when Ornament provides one), so an automation can react to a value drifting out of range.
 - **Correct units.** Ornament stores each value twice — in a canonical unit and in the unit your lab used. Sensors report the lab's unit, and older measurements are converted into that same unit so a lab switching from mg/dL to mmol/L cannot corrupt the history.
+- **Qualitative results read as words.** Ornament returns urine and stool findings as 0 or 1 with the wording tucked into the unit (`Undetected|Detected`). Those sensors say `Undetected` or `Detected`, not `0.0 Undetected|Detected`, and expose which outcome is normal.
 - **A problem binary sensor** that turns on when anything is flagged abnormal, plus diagnostic sensors for the biomarker count, abnormal count, last lab report date and laboratory name.
 - **One device per person.** Add the integration once per family member; each gets its own device and its own set of entities.
 
@@ -46,7 +47,7 @@ Configure via the integration's **Configure** button:
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| Update interval (hours) | 6 | How often to poll Ornament. Lab results change rarely, so a long interval is fine. |
+| Update interval (hours) | 1 | How often to poll Ornament. Lab results change rarely, so a longer interval is perfectly fine too. |
 | Import measurement history | on | Backfills past results into long-term statistics. Turn off if you only want values recorded from now on. |
 | History attribute size | 20 | How many measurements to expose in the `history` attribute. Set to 0 to omit it. |
 | Biomarker name language | en | Language requested from the Ornament dictionary. |
@@ -120,6 +121,10 @@ Between lab visits the line holds its last value, because that is what the senso
 Home Assistant has two stores: **states** (short-lived, purged after `purge_keep_days`) and **long-term statistics** (hourly, kept forever). Only statistics accept timestamps in the past, so that is where the measurement history goes — each measurement lands in the hour it was actually taken. The sensors carry `state_class: measurement`, so Home Assistant's own graphs read those statistics and show the full record.
 
 Gaps between lab visits appear as gaps in the graph, which is honest: no values are invented between tests.
+
+## Icon
+
+Home Assistant loads integration icons from [home-assistant/brands](https://github.com/home-assistant/brands), not from this repository, so the artwork is kept in [`brands/`](brands/custom_integrations/ornament_health) ready to submit: copy `custom_integrations/ornament_health/` into a fork of that repo and open a pull request. Until it is merged, Home Assistant shows the default placeholder.
 
 ## Notes and limitations
 

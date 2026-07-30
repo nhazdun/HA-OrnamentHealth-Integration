@@ -258,7 +258,14 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
             # the newest entry's unit and convert the rest through the canonical
             # value, so a lab switching units does not corrupt the history.
             target_unit_id = entries[-1].get("originalUnitId")
-            factor = self._unit_factor(definition, target_unit_id, entries)
+            options = self.thesaurus.unit_options(target_unit_id)
+            # A qualitative result is already 0 or 1 - converting it through a
+            # unit factor would be meaningless.
+            factor = (
+                None
+                if options
+                else self._unit_factor(definition, target_unit_id, entries)
+            )
 
             # Uploading the same lab report twice leaves two entries with one
             # timestamp, and a report can also pair a result with its control
@@ -298,6 +305,7 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
                 reference_max=common[1],
                 optimal_min=optimal[0],
                 optimal_max=optimal[1],
+                options=options,
             )
         return biomarkers
 

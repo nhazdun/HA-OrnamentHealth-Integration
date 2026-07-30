@@ -23,6 +23,7 @@ from .const import (
     ATTR_IS_ABNORMAL,
     ATTR_MEASURED_AT,
     ATTR_MEASUREMENT_COUNT,
+    ATTR_NORMAL_OPTIONS,
     ATTR_OPTIMAL_MAX,
     ATTR_OPTIMAL_MIN,
     ATTR_PREVIOUS_MEASURED_AT,
@@ -89,7 +90,6 @@ async def async_setup_entry(
 class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
     """A single biomarker, holding its latest value and its whole history."""
 
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = "mdi:test-tube"
 
     def __init__(self, coordinator: OrnamentCoordinator, biomarker_id: int) -> None:
@@ -100,7 +100,14 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
         biomarker = self._biomarker
         if biomarker is not None:
             self._attr_name = biomarker.title
-            self._attr_native_unit_of_measurement = biomarker.unit
+            if biomarker.is_qualitative:
+                # An outcome such as Detected is a state, not a measurement, so
+                # it carries no unit and no statistics.
+                self._attr_device_class = SensorDeviceClass.ENUM
+                self._attr_options = biomarker.options
+            else:
+                self._attr_state_class = SensorStateClass.MEASUREMENT
+                self._attr_native_unit_of_measurement = biomarker.unit
 
     @property
     def _biomarker(self) -> Biomarker | None:
@@ -115,18 +122,20 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
         return super().available and self._biomarker is not None
 
     @property
-    def native_value(self) -> float | None:
-        """Return the most recent measurement."""
+    def native_value(self) -> float | str | None:
+        """Return the most recent result."""
         biomarker = self._biomarker
         if biomarker is None or biomarker.latest is None:
             return None
-        return biomarker.latest.value
+        return biomarker.label(biomarker.latest.value)
 
     @property
     def native_unit_of_measurement(self) -> str | None:
         """Return the unit the lab reported the newest value in."""
         biomarker = self._biomarker
-        return biomarker.unit if biomarker else self._attr_native_unit_of_measurement
+        if biomarker is None:
+            return self._attr_native_unit_of_measurement
+        return None if biomarker.is_qualitative else biomarker.unit
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
@@ -143,17 +152,22 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
             ATTR_MEASURED_AT: biomarker.latest.timestamp.isoformat(),
             ATTR_MEASUREMENT_COUNT: len(biomarker.measurements),
             ATTR_FIRST_MEASURED_AT: biomarker.measurements[0].timestamp.isoformat(),
-            ATTR_REFERENCE_MIN: biomarker.reference_min,
-            ATTR_REFERENCE_MAX: biomarker.reference_max,
-            ATTR_OPTIMAL_MIN: biomarker.optimal_min,
-            ATTR_OPTIMAL_MAX: biomarker.optimal_max,
         }
+
+        if biomarker.is_qualitative:
+            attributes[ATTR_NORMAL_OPTIONS] = biomarker.normal_options
+        else:
+            attributes[ATTR_REFERENCE_MIN] = biomarker.reference_min
+            attributes[ATTR_REFERENCE_MAX] = biomarker.reference_max
+            attributes[ATTR_OPTIMAL_MIN] = biomarker.optimal_min
+            attributes[ATTR_OPTIMAL_MAX] = biomarker.optimal_max
 
         previous = biomarker.previous
         if previous is not None:
-            attributes[ATTR_PREVIOUS_VALUE] = previous.value
+            attributes[ATTR_PREVIOUS_VALUE] = biomarker.label(previous.value)
             attributes[ATTR_PREVIOUS_MEASURED_AT] = previous.timestamp.isoformat()
-            attributes[ATTR_TREND] = biomarker.trend
+            if not biomarker.is_qualitative:
+                attributes[ATTR_TREND] = biomarker.trend
 
         limit = int(
             self.coordinator.config_entry.options.get(
@@ -164,7 +178,7 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
             attributes[ATTR_HISTORY] = [
                 {
                     "date": measurement.timestamp.isoformat(),
-                    "value": measurement.value,
+                    "value": biomarker.label(measurement.value),
                 }
                 for measurement in biomarker.measurements[-limit:]
             ]
@@ -193,6 +207,9 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
         """Push this biomarker's measurements into long-term statistics."""
         biomarker = self._biomarker
         if biomarker is None or not biomarker.measurements:
+            return
+        if biomarker.is_qualitative:
+            # Long-term statistics only hold numbers, and Detected is not one.
             return
         if not self.coordinator.config_entry.options.get(
             CONF_IMPORT_HISTORY, DEFAULT_IMPORT_HISTORY

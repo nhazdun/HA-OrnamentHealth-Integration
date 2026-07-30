@@ -30,6 +30,36 @@ class Biomarker:
     reference_max: float | None = None
     optimal_min: float | None = None
     optimal_max: float | None = None
+    # Set for qualitative results, where the value is an index into these
+    # outcomes rather than a quantity: 0 = Undetected, 1 = Detected.
+    options: list[str] | None = None
+
+    @property
+    def is_qualitative(self) -> bool:
+        """Return whether this biomarker reports an outcome, not a number."""
+        return bool(self.options)
+
+    def label(self, value: float) -> str | float:
+        """Return the wording for a value, or the value when it is a quantity."""
+        if not self.options:
+            return value
+        index = round(value)
+        if 0 <= index < len(self.options):
+            return self.options[index]
+        return str(value)
+
+    @property
+    def normal_options(self) -> list[str] | None:
+        """Return which outcomes Ornament considers normal."""
+        if not self.options or self.reference_min is None:
+            return None
+        low = round(self.reference_min)
+        high = round(self.reference_max if self.reference_max is not None else low)
+        return [
+            self.options[index]
+            for index in range(low, high + 1)
+            if 0 <= index < len(self.options)
+        ] or None
 
     @property
     def latest(self) -> Measurement | None:

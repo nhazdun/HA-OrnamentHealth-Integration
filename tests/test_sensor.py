@@ -106,6 +106,52 @@ async def test_duplicate_timestamps_collapse_to_current_reading(
     assert state.attributes["trend"] == "up"
 
 
+async def test_qualitative_biomarker_reads_as_wording(
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+    config_entry: MockConfigEntry,
+) -> None:
+    """A qualitative result shows its wording, not the raw 0/1 or the unit."""
+    await _setup(hass, config_entry)
+
+    state = hass.states.get("sensor.ornament_test_person_mucus_urine_qualitative")
+    assert state.state == "Detected"
+    assert "unit_of_measurement" not in state.attributes
+    assert state.attributes["device_class"] == "enum"
+    assert state.attributes["options"] == ["Undetected", "Detected"]
+    assert state.attributes["normal_options"] == ["Undetected"]
+    assert state.attributes["previous_value"] == "Undetected"
+    assert [point["value"] for point in state.attributes["history"]] == [
+        "Undetected",
+        "Detected",
+    ]
+    assert "state_class" not in state.attributes
+
+
+async def test_qualitative_biomarker_has_no_statistics(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Wording cannot go into long-term statistics, so none is written."""
+    await _setup(hass, config_entry)
+    await async_wait_recording_done(hass)
+
+    statistic_id = "sensor.ornament_test_person_mucus_urine_qualitative"
+    stats = await hass.async_add_executor_job(
+        statistics_during_period,
+        hass,
+        dt_util.utc_from_timestamp(DATE_OLD - 3600),
+        None,
+        {statistic_id},
+        "hour",
+        None,
+        {"mean"},
+    )
+    assert statistic_id not in stats
+
+
 async def test_profile_level_sensors(
     hass: HomeAssistant,
     mock_api: AiohttpClientMocker,
@@ -115,10 +161,10 @@ async def test_profile_level_sensors(
     await _setup(hass, config_entry)
 
     assert (
-        hass.states.get("sensor.ornament_test_person_biomarkers_tracked").state == "4"
+        hass.states.get("sensor.ornament_test_person_biomarkers_tracked").state == "5"
     )
     assert (
-        hass.states.get("sensor.ornament_test_person_abnormal_biomarkers").state == "1"
+        hass.states.get("sensor.ornament_test_person_abnormal_biomarkers").state == "2"
     )
     assert (
         hass.states.get("sensor.ornament_test_person_last_laboratory").state
@@ -140,7 +186,7 @@ async def test_entities_are_registered_to_one_device(
 
     registry = er.async_get(hass)
     entries = er.async_entries_for_config_entry(registry, config_entry.entry_id)
-    assert len(entries) == 9  # 4 biomarkers + 4 diagnostics + 1 binary sensor
+    assert len(entries) == 10  # 5 biomarkers + 4 diagnostics + 1 binary sensor
     assert len({entry.device_id for entry in entries}) == 1
 
 

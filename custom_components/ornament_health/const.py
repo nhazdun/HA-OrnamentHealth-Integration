@@ -20,7 +20,7 @@ CONF_HISTORY_ATTRIBUTE_LIMIT: Final = "history_attribute_limit"
 CONF_SCAN_INTERVAL_HOURS: Final = "scan_interval_hours"
 
 DEFAULT_LANGUAGE: Final = "en"
-DEFAULT_SCAN_INTERVAL: Final = timedelta(hours=6)
+DEFAULT_SCAN_INTERVAL: Final = timedelta(hours=1)
 DEFAULT_IMPORT_HISTORY: Final = True
 DEFAULT_HISTORY_ATTRIBUTE_LIMIT: Final = 20
 
@@ -40,6 +40,7 @@ ATTR_REFERENCE_MIN: Final = "reference_min"
 ATTR_REFERENCE_MAX: Final = "reference_max"
 ATTR_OPTIMAL_MIN: Final = "optimal_min"
 ATTR_OPTIMAL_MAX: Final = "optimal_max"
+ATTR_NORMAL_OPTIONS: Final = "normal_options"
 ATTR_MEASUREMENT_COUNT: Final = "measurement_count"
 ATTR_FIRST_MEASURED_AT: Final = "first_measured_at"
 ATTR_PREVIOUS_VALUE: Final = "previous_value"

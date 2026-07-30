@@ -55,7 +55,7 @@ PROFILES_PAYLOAD: list[dict[str, Any]] = [
 
 # Biomarker 187 is stored canonically at 2.4773 per ng/mL, 337 is unitless.
 BIOMARKERS_PAYLOAD: dict[str, Any] = {
-    "total": 4,
+    "total": 5,
     "biomarkers": [
         {
             "id": 187,
@@ -156,10 +156,36 @@ BIOMARKERS_PAYLOAD: dict[str, Any] = {
                 },
             ],
         },
+        {
+            # Qualitative result: the value is an index into the unit's wording.
+            "id": 531,
+            "categoryId": 27,
+            "isUnitless": False,
+            "status": "A",
+            "entries": [
+                {
+                    "seid": "e9",
+                    "sid": "s2",
+                    "value": "1.0",
+                    "originalValue": "1",
+                    "date": DATE_NEW,
+                    "originalUnitId": 1001,
+                },
+                {
+                    "seid": "e10",
+                    "sid": "s1",
+                    "value": "0.0",
+                    "originalValue": "0",
+                    "date": DATE_OLD,
+                    "originalUnitId": 1001,
+                },
+            ],
+        },
     ],
     "refs": {
         # Canonical range 49.55-198.2 is 20-80 ng/mL once divided by 2.4773.
         "187": {"common": [49.55, 198.2], "optimal": [], "paidOptimal": [74.32, 123.9]},
+        "531": {"common": [0.0, 0.0], "optimal": [], "paidOptimal": []},
         "88": {"common": [0.08539, 0.8539], "optimal": [], "paidOptimal": []},
         "337": {"common": [5.0, 8.0], "optimal": [], "paidOptimal": []},
         "226": {"common": [9.4, 12.5], "optimal": [], "paidOptimal": []},
@@ -213,6 +239,13 @@ THESAURUS_PAYLOAD: dict[str, Any] = {
             "isUnitless": False,
             "unitsFactors": [[61, 1.0]],
         },
+        {
+            "id": 531,
+            "title": "Mucus, urine qualitative",
+            "displayCategoryId": 27,
+            "isUnitless": False,
+            "unitsFactors": [[1001, 1.0]],
+        },
     ],
 }
 
@@ -221,6 +254,7 @@ UNITS_PAYLOAD: list[dict[str, Any]] = [
     {"id": 34, "title": "mcg/L", "valueType": 1},
     {"id": 56, "title": "ng/mL", "valueType": 1},
     {"id": 61, "title": "s", "valueType": 1},
+    {"id": 1001, "title": "Undetected|Detected", "valueType": 2},
 ]
 
 CATEGORIES_PAYLOAD: list[dict[str, Any]] = [

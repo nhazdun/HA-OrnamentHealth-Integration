@@ -22,6 +22,9 @@ PATH_THESAURUS_BIOMARKERS = "/thesaurus-api/public/v1.1/biomarkers"
 PATH_MEASUREMENT_UNITS = "/thesaurus-api/public/v1.1/measurement-units"
 PATH_BIOMARKER_CATEGORIES = "/thesaurus-api/public/v1.0/biomarker-categories"
 
+# Qualitative units spell their outcomes out in the title, e.g. "Negative|Positive".
+QUALITATIVE_SEPARATOR = "|"
+
 
 class OrnamentApiError(Exception):
     """Raised when the Ornament API returns an unexpected response."""
@@ -86,10 +89,29 @@ class Thesaurus:
         return f"Biomarker {biomarker_id}"
 
     def unit_title(self, unit_id: int | None) -> str | None:
-        """Return the unit symbol for a unit id."""
+        """Return the unit symbol for a unit id, or None for qualitative ones."""
         if unit_id is None:
             return None
-        return self.units.get(unit_id)
+        title = self.units.get(unit_id)
+        if title and QUALITATIVE_SEPARATOR in title:
+            # "Undetected|Detected" names the two outcomes, it is not a unit.
+            return None
+        return title
+
+    def unit_options(self, unit_id: int | None) -> list[str] | None:
+        """Return the outcomes of a qualitative unit, in value order.
+
+        Ornament reports qualitative results as 0 or 1 and puts the wording in
+        the unit itself, so "Undetected|Detected" means 0 is Undetected and 1 is
+        Detected.
+        """
+        if unit_id is None:
+            return None
+        title = self.units.get(unit_id)
+        if not title or QUALITATIVE_SEPARATOR not in title:
+            return None
+        options = [part.strip() for part in title.split(QUALITATIVE_SEPARATOR)]
+        return [option for option in options if option] or None
 
     def category_title(self, category_id: int | None) -> str | None:
         """Return the category name for a category id."""
