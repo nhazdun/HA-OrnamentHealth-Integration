@@ -22,6 +22,7 @@ PATH_SUBMISSIONS = "/medical-data-api/public/v1.0/profile/submissions"
 PATH_THESAURUS_BIOMARKERS = "/thesaurus-api/public/v1.1/biomarkers"
 PATH_MEASUREMENT_UNITS = "/thesaurus-api/public/v1.1/measurement-units"
 PATH_BIOMARKER_CATEGORIES = "/thesaurus-api/public/v1.0/biomarker-categories"
+PATH_BIOMATERIALS = "/thesaurus-api/public/v1.0/biomaterials"
 
 # Qualitative units spell their outcomes out in the title, e.g. "Negative|Positive".
 QUALITATIVE_SEPARATOR = "|"
@@ -75,9 +76,13 @@ class BiomarkerDefinition:
     id: int
     title: str
     category_id: int | None = None
+    biomaterial_id: int | None = None
     is_unitless: bool = False
     # unit id -> factor converting an original value into the canonical value
     unit_factors: dict[int, float] = field(default_factory=dict)
+    # Alternative names Ornament lists for the same biomarker, e.g. ALT is also
+    # "Alanine aminotransferase" and "GPT".
+    synonyms: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -87,6 +92,7 @@ class Thesaurus:
     biomarkers: dict[int, BiomarkerDefinition] = field(default_factory=dict)
     units: dict[int, str] = field(default_factory=dict)
     categories: dict[int, str] = field(default_factory=dict)
+    biomaterials: dict[int, str] = field(default_factory=dict)
     digest: str | None = None
 
     def biomarker_title(self, biomarker_id: int) -> str:
@@ -130,6 +136,12 @@ class Thesaurus:
         if category_id is None:
             return None
         return self.categories.get(category_id)
+
+    def biomaterial_title(self, biomaterial_id: int | None) -> str | None:
+        """Return what the sample was taken from, e.g. Blood or Urine."""
+        if biomaterial_id is None:
+            return None
+        return self.biomaterials.get(biomaterial_id)
 
 
 class OrnamentClient:
@@ -243,12 +255,19 @@ class OrnamentClient:
                         unit_factors[int(pair[0])] = float(pair[1])
                     except (TypeError, ValueError):
                         continue
+            synonyms = [
+                str(entry["title"])
+                for entry in item.get("synonyms") or []
+                if isinstance(entry, dict) and entry.get("title")
+            ]
             definitions[biomarker_id] = BiomarkerDefinition(
                 id=biomarker_id,
                 title=str(item.get("title") or f"Biomarker {biomarker_id}"),
                 category_id=item.get("displayCategoryId"),
+                biomaterial_id=item.get("biomaterialId"),
                 is_unitless=bool(item.get("isUnitless")),
                 unit_factors=unit_factors,
+                synonyms=synonyms,
             )
         return definitions, new_digest
 
@@ -266,6 +285,21 @@ class OrnamentClient:
             except (KeyError, TypeError, ValueError):
                 continue
         return units
+
+    async def async_get_biomaterials(self, language: str) -> dict[int, str]:
+        """Return the biomaterial dictionary: blood, urine, feces and so on."""
+        payload = await self._request(
+            "GET", PATH_BIOMATERIALS, params={"lang": language}
+        )
+        if not isinstance(payload, list):
+            raise OrnamentApiError("Unexpected biomaterials payload")
+        materials: dict[int, str] = {}
+        for item in payload:
+            try:
+                materials[int(item["id"])] = str(item["title"])
+            except (KeyError, TypeError, ValueError):
+                continue
+        return materials
 
     async def async_get_categories(self, language: str) -> dict[int, str]:
         """Return the biomarker category dictionary."""

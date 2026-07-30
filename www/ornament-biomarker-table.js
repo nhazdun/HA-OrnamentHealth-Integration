@@ -11,7 +11,7 @@
  *   type: custom:ornament-biomarker-table
  */
 
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.3.0";
 
 const TEXT = {
   search: "Пошук біомаркера…",
@@ -122,9 +122,12 @@ function biomarkerTitle(friendlyName, category) {
 /**
  * Build a sparkline of the measurement history.
  *
- * `band` draws the reference bounds as dashed guides. The vertical scale comes
- * from the data alone, so a bound only shows up when the series actually runs
- * close to it — which is when it tells you something.
+ * The vertical scale comes from the measurements, so the line shows the change
+ * between them rather than being flattened by a wide reference range. But a
+ * series sitting entirely beyond a reference bound would then be auto-scaled
+ * into the middle of the plot and read as unremarkable, so the axis is pulled
+ * out to the bound it broke: the dashed guide appears at the edge and the whole
+ * line is visibly on the wrong side of it.
  */
 function sparkline(values, { band, step = false, width = 116, height = 30 }) {
   if (!values || values.length < 2) return '<span class="muted">—</span>';
@@ -134,6 +137,12 @@ function sparkline(values, { band, step = false, width = 116, height = 30 }) {
   const innerH = height - pad * 2;
   let min = Math.min(...values);
   let max = Math.max(...values);
+
+  if (band) {
+    if (band.max != null && min > band.max) min = band.max;
+    if (band.min != null && max < band.min) max = band.min;
+  }
+
   if (max === min) {
     min -= 1;
     max += 1;

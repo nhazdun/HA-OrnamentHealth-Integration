@@ -214,6 +214,8 @@ THESAURUS_PAYLOAD: dict[str, Any] = {
         {
             "id": 187,
             "title": "Vitamin D, 25-Hydroxy",
+            "biomaterialId": 2,
+            "synonyms": [{"title": "Calcidiol", "language": "EN"}],
             "displayCategoryId": 21,
             "isUnitless": False,
             "unitsFactors": [[56, 2.4773], [34, 1.0]],
@@ -228,6 +230,7 @@ THESAURUS_PAYLOAD: dict[str, Any] = {
         {
             "id": 337,
             "title": "pH, urine",
+            "biomaterialId": 5,
             "displayCategoryId": 82,
             "isUnitless": True,
             "unitsFactors": [[1, 1.0]],
@@ -255,6 +258,11 @@ UNITS_PAYLOAD: list[dict[str, Any]] = [
     {"id": 56, "title": "ng/mL", "valueType": 1},
     {"id": 61, "title": "s", "valueType": 1},
     {"id": 1001, "title": "Undetected|Detected", "valueType": 2},
+]
+
+BIOMATERIALS_PAYLOAD: list[dict[str, Any]] = [
+    {"id": 2, "title": "Blood"},
+    {"id": 5, "title": "Urine"},
 ]
 
 CATEGORIES_PAYLOAD: list[dict[str, Any]] = [
@@ -302,6 +310,9 @@ def mock_api(aioclient_mock: AiohttpClientMocker) -> AiohttpClientMocker:
     aioclient_mock.get(
         f"{base}/thesaurus-api/public/v1.0/biomarker-categories",
         json=CATEGORIES_PAYLOAD,
+    )
+    aioclient_mock.get(
+        f"{base}/thesaurus-api/public/v1.0/biomaterials", json=BIOMATERIALS_PAYLOAD
     )
     return aioclient_mock
 

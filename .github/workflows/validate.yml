@@ -23,11 +23,9 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          # brands: only integrations shipped with Home Assistant have assets in
-          # home-assistant/brands. description and topics are GitHub repository
-          # settings; fill them in and drop them from this list before submitting
-          # the repository to the HACS default store.
-          ignore: brands description topics
+          # Drop this once home-assistant/brands#10883 is merged; until then the
+          # icons exist only in this repository's brands/ directory.
+          ignore: brands
 
   tests:
     name: pytest

@@ -1,13 +1,17 @@
 {
   "domain": "ornament_health",
   "name": "Ornament Health",
-  "after_dependencies": ["recorder"],
-  "codeowners": ["@nhazdun"],
+  "after_dependencies": [
+    "recorder"
+  ],
+  "codeowners": [
+    "@nhazdun"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/nhazdun/HA-OrnamentHealth-Integration",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/nhazdun/HA-OrnamentHealth-Integration/issues",
   "requirements": [],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

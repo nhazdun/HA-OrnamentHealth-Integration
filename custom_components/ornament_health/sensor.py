@@ -17,12 +17,14 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ATTR_BIOMARKER_ID,
+    ATTR_BIOMATERIAL,
     ATTR_CATEGORY,
     ATTR_FIRST_MEASURED_AT,
     ATTR_HISTORY,
     ATTR_IS_ABNORMAL,
     ATTR_MEASURED_AT,
     ATTR_MEASUREMENT_COUNT,
+    ATTR_NAMES,
     ATTR_NORMAL_OPTIONS,
     ATTR_OPTIMAL_MAX,
     ATTR_OPTIMAL_MIN,
@@ -31,6 +33,7 @@ from .const import (
     ATTR_REFERENCE_MAX,
     ATTR_REFERENCE_MIN,
     ATTR_STATUS,
+    ATTR_SYNONYMS,
     ATTR_TREND,
     CONF_HISTORY_ATTRIBUTE_LIMIT,
     CONF_IMPORT_HISTORY,
@@ -40,6 +43,7 @@ from .const import (
 )
 from .coordinator import OrnamentConfigEntry, OrnamentCoordinator
 from .entity import OrnamentEntity
+from .icons import biomarker_icon
 from .model import Biomarker
 from .statistics import async_import_measurements
 
@@ -90,8 +94,6 @@ async def async_setup_entry(
 class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
     """A single biomarker, holding its latest value and its whole history."""
 
-    _attr_icon = "mdi:test-tube"
-
     def __init__(self, coordinator: OrnamentCoordinator, biomarker_id: int) -> None:
         """Initialise the biomarker sensor."""
         biomarker = coordinator.data.biomarkers.get(biomarker_id)
@@ -103,6 +105,10 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
         )
         self._biomarker_id = biomarker_id
         self._imported_through: datetime | None = None
+        self._attr_icon = biomarker_icon(
+            biomarker.category_id if biomarker else None,
+            biomarker.biomaterial_id if biomarker else None,
+        )
         if biomarker is not None:
             self._attr_name = biomarker.title
             if biomarker.is_qualitative:
@@ -152,6 +158,7 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
         attributes: dict[str, Any] = {
             ATTR_BIOMARKER_ID: biomarker.id,
             ATTR_CATEGORY: biomarker.category,
+            ATTR_BIOMATERIAL: biomarker.biomaterial,
             ATTR_STATUS: "abnormal" if biomarker.is_abnormal else "normal",
             ATTR_IS_ABNORMAL: biomarker.is_abnormal,
             ATTR_MEASURED_AT: biomarker.latest.timestamp.isoformat(),
@@ -173,6 +180,11 @@ class OrnamentBiomarkerSensor(OrnamentEntity, SensorEntity):
             attributes[ATTR_PREVIOUS_MEASURED_AT] = previous.timestamp.isoformat()
             if not biomarker.is_qualitative:
                 attributes[ATTR_TREND] = biomarker.trend
+
+        if biomarker.synonyms:
+            attributes[ATTR_SYNONYMS] = biomarker.synonyms
+        if biomarker.names:
+            attributes[ATTR_NAMES] = biomarker.names
 
         limit = int(
             self.coordinator.config_entry.options.get(

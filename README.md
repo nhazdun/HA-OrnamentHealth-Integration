@@ -9,9 +9,10 @@ Pulls every biomarker from an [Ornament Health](https://ornament.health) profile
 - **A sensor for every biomarker** on the profile — hemoglobin, ferritin, vitamin D, TSH, cholesterol, and whatever else your lab reports contain. A typical profile yields 100–200 sensors.
 - **Real history.** Lab results are dated when the blood was drawn, often years ago. Home Assistant normally records a sensor only from the moment it is created, so this integration writes every past measurement into long-term statistics. Open any biomarker and the graph shows the whole record, back to your first test.
 - **Personalised reference ranges** as numeric attributes on every biomarker (`reference_min`/`reference_max`, plus the optimal range when Ornament provides one), so an automation or a chart can use them directly. Ornament calculates these bounds from the profile's age and sex, and they are converted into the same unit the sensor reports.
-- **Correct units.** Ornament stores each value twice — in a canonical unit and in the unit your lab used. Sensors report the lab's unit, and older measurements are converted into that same unit so a lab switching from mg/dL to mmol/L cannot corrupt the history.
+- **Correct units.** Ornament stores each value twice — in a canonical unit and in the unit your lab used. Sensors report the lab's unit, and older measurements are converted into that same unit so a lab switching from mg/dL to mmol/L cannot corrupt the history. Dimensionless indices — HOMA-IR, INR, urine specific gravity, signal/cutoff coefficients — arrive tagged with Ornament's `×100%` ratio notation rather than a real unit, so they are reported with no unit at all; genuine percentages keep their `%`.
 - **Qualitative results read as words.** Ornament returns urine and stool findings as 0 or 1 with the wording tucked into the unit (`Undetected|Detected`). Those sensors say `Undetected` or `Detected`, not `0.0 Undetected|Detected`, and expose which outcome is normal.
 - **A problem binary sensor** that turns on when anything is flagged abnormal, plus diagnostic sensors for the biomarker count, abnormal count, last lab report date and laboratory name.
+- **Icons that match the sample.** A blood panel, a urinalysis and a stool test look different at a glance, because the icon comes from the biomaterial (or the category, where that says more).
 - **Grouped into lab panels.** Each Ornament category — Complete blood count, Urinalysis, Lipids, Vitamins — becomes its own device linked to the person, so 150 biomarkers browse as a couple of dozen panels instead of one flat list.
 - **One device tree per person.** Add the integration once per family member; each gets its own profile device with its panels beneath it.
 
@@ -52,6 +53,7 @@ Configure via the integration's **Configure** button:
 | Import measurement history | on | Backfills past results into long-term statistics. Turn off if you only want values recorded from now on. |
 | History attribute size | 20 | How many measurements to expose in the `history` attribute. Set to 0 to omit it. |
 | Biomarker name language | en | Language requested from the Ornament dictionary. |
+| Also show names in | – | Adds a `names` attribute with the biomarker's title in other languages. Each language is a separate ~1.6 MB download, fetched once and cached. |
 
 ## Entities
 
@@ -73,6 +75,8 @@ sensor.ornament_<person>_vitamins_vitamin_d_25_hydroxy:
     reference_max: 80.0
     optimal_min: 30.0
     optimal_max: 50.0
+    biomaterial: Blood      # what the sample was taken from
+    synonyms: [Calcidiol]   # spelled-out names Ornament also knows
     previous_value: 24.8
     trend: down             # up / down / stable
     history: [{date: ..., value: ...}, ...]
@@ -156,6 +160,8 @@ Gaps between lab visits appear as gaps in the graph, which is honest: no values 
 Home Assistant loads integration icons from [home-assistant/brands](https://github.com/home-assistant/brands), not from this repository, so the artwork is kept in [`brands/`](brands/custom_integrations/ornament_health) ready to submit: copy `custom_integrations/ornament_health/` into a fork of that repo and open a pull request. Until it is merged, Home Assistant shows the default placeholder.
 
 ## Notes and limitations
+
+- Ornament's API has no descriptive text for biomarkers — there is no articles endpoint, and the dictionary carries only titles and synonyms. What you get instead is the `synonyms` attribute (ALT is also "Alanine aminotransferase" and "GPT") and, optionally, the title in other languages.
 
 - The Ornament API exposes one token per account; all profiles linked to that account are offered in the picker.
 - Biomarker names come from Ornament's dictionary (~5000 entries, cached locally and refreshed only when Ornament's digest changes). Ornament translates it into Russian, German, Spanish, French, Italian and Portuguese.

@@ -45,12 +45,14 @@
           "scan_interval_minutes": "Update interval (minutes)",
           "import_history": "Import measurement history into long-term statistics",
           "history_attribute_limit": "Measurements kept in the history attribute",
-          "language": "Biomarker name language"
+          "language": "Biomarker name language",
+          "name_languages": "Also show names in"
         },
         "data_description": {
           "import_history": "Backfills past lab results so history graphs show every measurement, not just the ones recorded since installation.",
           "history_attribute_limit": "Set to 0 to leave the history attribute out entirely.",
-          "scan_interval_minutes": "How often to check Ornament for new lab results. Minimum 15 minutes."
+          "scan_interval_minutes": "How often to check Ornament for new lab results. Minimum 15 minutes.",
+          "name_languages": "Adds a names attribute with each biomarker's title in these languages. Each one is a separate ~1.6 MB download, fetched once and cached."
         }
       }
     }

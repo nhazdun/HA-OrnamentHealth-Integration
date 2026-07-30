@@ -34,6 +34,7 @@ from .const import (
     CONF_HISTORY_ATTRIBUTE_LIMIT,
     CONF_IMPORT_HISTORY,
     CONF_LANGUAGE,
+    CONF_NAME_LANGUAGES,
     CONF_PROFILE_ID,
     CONF_PROFILE_NAME,
     CONF_SCAN_INTERVAL_HOURS,
@@ -239,6 +240,16 @@ class OrnamentOptionsFlow(OptionsFlow):
                 ): SelectSelector(
                     SelectSelectorConfig(
                         options=SUPPORTED_LANGUAGES, mode=SelectSelectorMode.DROPDOWN
+                    )
+                ),
+                vol.Optional(
+                    CONF_NAME_LANGUAGES,
+                    default=options.get(CONF_NAME_LANGUAGES, []),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=SUPPORTED_LANGUAGES,
+                        mode=SelectSelectorMode.LIST,
+                        multiple=True,
                     )
                 ),
             }

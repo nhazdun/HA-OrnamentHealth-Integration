@@ -25,6 +25,8 @@ class Biomarker:
     unit: str | None
     category: str | None
     category_id: int | None
+    biomaterial: str | None
+    biomaterial_id: int | None
     status: str | None
     measurements: list[Measurement] = field(default_factory=list)
     reference_min: float | None = None
@@ -34,6 +36,11 @@ class Biomarker:
     # Set for qualitative results, where the value is an index into these
     # outcomes rather than a quantity: 0 = Undetected, 1 = Detected.
     options: list[str] | None = None
+    # Alternative names Ornament lists, useful for searching a sensor by the
+    # spelled-out term when the title is an abbreviation.
+    synonyms: list[str] = field(default_factory=list)
+    # The biomarker's name in other languages, when any were requested.
+    names: dict[str, str] = field(default_factory=dict)
 
     @property
     def is_qualitative(self) -> bool:

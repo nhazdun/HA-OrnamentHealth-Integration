@@ -25,6 +25,7 @@ from .api import (
 )
 from .const import (
     CONF_LANGUAGE,
+    CONF_NAME_LANGUAGES,
     CONF_PROFILE_ID,
     CONF_PROFILE_NAME,
     DEFAULT_LANGUAGE,
@@ -71,6 +72,8 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
             CONF_LANGUAGE, entry.data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)
         )
         self.thesaurus = Thesaurus()
+        # language -> {biomarker id: title}, for the optional multilingual names
+        self.extra_names: dict[str, dict[int, str]] = {}
         # Sensors register a coroutine here so a resync can re-run the
         # statistics backfill for every entity at once, and add their entity_id
         # so the old statistics can be cleared first.
@@ -120,7 +123,9 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
                 id=biomarker_id,
                 title=item.get("title") or f"Biomarker {biomarker_id}",
                 category_id=item.get("category_id"),
+                biomaterial_id=item.get("biomaterial_id"),
                 is_unitless=bool(item.get("is_unitless")),
+                synonyms=list(item.get("synonyms") or []),
                 unit_factors={
                     int(unit_id): float(factor)
                     for unit_id, factor in (item.get("unit_factors") or {}).items()
@@ -135,6 +140,10 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
             categories={
                 int(category_id): title
                 for category_id, title in (cached.get("categories") or {}).items()
+            },
+            biomaterials={
+                int(material_id): title
+                for material_id, title in (cached.get("biomaterials") or {}).items()
             },
             digest=cached.get("digest"),
         )
@@ -156,7 +165,9 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
                     str(biomarker_id): {
                         "title": definition.title,
                         "category_id": definition.category_id,
+                        "biomaterial_id": definition.biomaterial_id,
                         "is_unitless": definition.is_unitless,
+                        "synonyms": definition.synonyms,
                         "unit_factors": {
                             str(unit_id): factor
                             for unit_id, factor in definition.unit_factors.items()
@@ -172,6 +183,10 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
                 "categories": {
                     str(category_id): title
                     for category_id, title in self.thesaurus.categories.items()
+                },
+                "biomaterials": {
+                    str(material_id): title
+                    for material_id, title in self.thesaurus.biomaterials.items()
                 },
             }
         )
@@ -196,8 +211,61 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
             self.thesaurus.categories = await self._async_fetch_with_fallback(
                 self.client.async_get_categories
             )
+        if not self.thesaurus.biomaterials:
+            self.thesaurus.biomaterials = await self._async_fetch_with_fallback(
+                self.client.async_get_biomaterials
+            )
         await self._async_apply_bundled_translations()
+        await self._async_refresh_extra_names()
         self._thesaurus_loaded = True
+
+    def _configured_name_languages(self) -> list[str]:
+        """Return the extra languages to fetch names in."""
+        chosen = self.config_entry.options.get(CONF_NAME_LANGUAGES) or []
+        return [code for code in chosen if code != self.language]
+
+    async def _async_refresh_extra_names(self) -> None:
+        """Fetch biomarker names in the additional languages, if any.
+
+        Each language is a separate ~1.6 MB dictionary, so nothing is fetched
+        unless the user asked for it.
+        """
+        wanted = set(self._configured_name_languages())
+        for stale in set(self.extra_names) - wanted:
+            del self.extra_names[stale]
+
+        for language in sorted(wanted - set(self.extra_names)):
+            try:
+                definitions, _ = await self.client.async_get_thesaurus(language)
+            except OrnamentApiError as err:
+                _LOGGER.debug("Could not load %s names: %s", language, err)
+                continue
+            if not definitions:
+                continue
+            names = {key: value.title for key, value in definitions.items()}
+            bundled = await self._async_load_bundled(language)
+            names.update(
+                {
+                    int(raw_id): title
+                    for raw_id, title in (bundled.get("biomarkers") or {}).items()
+                }
+            )
+            self.extra_names[language] = names
+
+    async def _async_load_bundled(self, language: str) -> dict[str, dict[str, str]]:
+        """Read the catalogue this integration ships for a language, if any."""
+        path = Path(__file__).parent / "translations" / f"thesaurus.{language}.json"
+
+        def _load() -> dict[str, dict[str, str]]:
+            if not path.is_file():
+                return {}
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                _LOGGER.warning("Could not read bundled translations at %s", path)
+                return {}
+
+        return await self.hass.async_add_executor_job(_load)
 
     async def _async_fetch_with_fallback(
         self, fetch: Callable[[str], Awaitable[dict[int, str]]]
@@ -241,6 +309,8 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
                 self.thesaurus.units[int(raw_id)] = title
         for raw_id, title in (bundled.get("categories") or {}).items():
             self.thesaurus.categories[int(raw_id)] = title
+        for raw_id, title in (bundled.get("biomaterials") or {}).items():
+            self.thesaurus.biomaterials[int(raw_id)] = title
         for raw_id, title in (bundled.get("biomarkers") or {}).items():
             definition = self.thesaurus.biomarkers.get(int(raw_id))
             if definition is not None:
@@ -383,7 +453,17 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
                 unit=None if is_unitless else self.thesaurus.unit_title(target_unit_id),
                 category=self.thesaurus.category_title(category_id),
                 category_id=category_id,
+                biomaterial=self.thesaurus.biomaterial_title(
+                    definition.biomaterial_id if definition else None
+                ),
+                biomaterial_id=definition.biomaterial_id if definition else None,
                 status=item.get("status"),
+                synonyms=definition.synonyms if definition else [],
+                names={
+                    language: names[biomarker_id]
+                    for language, names in self.extra_names.items()
+                    if biomarker_id in names
+                },
                 measurements=measurements,
                 reference_min=common[0],
                 reference_max=common[1],

@@ -473,3 +473,63 @@ async def test_qualitative_wording_is_translated(
     assert biomarkers[531].label(1.0) == "Виявлено"
     # ng/mL is an international unit and must not be renamed.
     assert biomarkers[187].unit == "ng/mL"
+
+
+async def test_biomaterial_icon_and_synonyms(
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Sensors say what the sample was and carry the spelled-out names."""
+    await _setup(hass, config_entry)
+
+    vitamin_d = hass.states.get(
+        "sensor.ornament_test_person_vitamins_vitamin_d_25_hydroxy"
+    )
+    assert vitamin_d.attributes["biomaterial"] == "Blood"
+    assert vitamin_d.attributes["synonyms"] == ["Calcidiol"]
+    # Vitamins has an icon of its own, which wins over the blood default.
+    assert vitamin_d.attributes["icon"] == "mdi:pill"
+
+    urine = hass.states.get("sensor.ornament_test_person_urinalysis_ph_urine")
+    assert urine.attributes["biomaterial"] == "Urine"
+    assert urine.attributes["icon"] == "mdi:cup-water"
+
+
+async def test_names_in_extra_languages(
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+) -> None:
+    """Asking for extra languages adds a names attribute."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Test Person",
+        unique_id="multilingual",
+        data={
+            CONF_TOKEN: TOKEN,
+            CONF_PROFILE_ID: PROFILE_ID,
+            CONF_PROFILE_NAME: "Test Person",
+        },
+        options={"language": "en", "name_languages": ["uk"]},
+    )
+    entry.add_to_hass(hass)
+    await _setup(hass, entry)
+
+    names = entry.runtime_data.data.biomarkers[187].names
+    assert names == {"uk": "Вітамін D, 25-гідрокси"}
+
+
+async def test_no_extra_downloads_without_the_option(
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Nothing multilingual is fetched unless it was asked for."""
+    await _setup(hass, config_entry)
+
+    assert entry_names(hass, config_entry) == {}
+
+
+def entry_names(hass: HomeAssistant, entry: MockConfigEntry) -> dict[str, str]:
+    """Return the multilingual names recorded for vitamin D."""
+    return entry.runtime_data.data.biomarkers[187].names
