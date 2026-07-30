@@ -188,7 +188,8 @@ async def test_biomarkers_are_grouped_into_category_devices(
     entity_registry = er.async_get(hass)
     device_registry = dr.async_get(hass)
     entries = er.async_entries_for_config_entry(entity_registry, config_entry.entry_id)
-    assert len(entries) == 10  # 5 biomarkers + 4 diagnostics + 1 binary sensor
+    # 5 biomarkers + 4 diagnostics + 1 binary sensor + 2 buttons
+    assert len(entries) == 12
 
     profile_device = device_registry.async_get_device(
         identifiers={(DOMAIN, PROFILE_ID)}

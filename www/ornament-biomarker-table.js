@@ -107,8 +107,9 @@ function biomarkerTitle(friendlyName, category) {
 /**
  * Build a sparkline of the measurement history.
  *
- * `band` shades the part of the plot that falls inside the reference range, so
- * a line drifting out of range is visible at a glance.
+ * `band` draws the reference bounds as dashed guides. The vertical scale comes
+ * from the data alone, so a bound only shows up when the series actually runs
+ * close to it — which is when it tells you something.
  */
 function sparkline(values, { band, step = false, width = 116, height = 30 }) {
   if (!values || values.length < 2) return '<span class="muted">—</span>';
@@ -135,18 +136,14 @@ function sparkline(values, { band, step = false, width = 116, height = 30 }) {
     if (step) line += ` L ${x(i).toFixed(1)} ${y(values[i - 1]).toFixed(1)}`;
     line += ` L ${x(i).toFixed(1)} ${y(values[i]).toFixed(1)}`;
   }
-  const area = `${line} L ${x(values.length - 1).toFixed(1)} ${(
-    height - pad
-  ).toFixed(1)} L ${x(0).toFixed(1)} ${(height - pad).toFixed(1)} Z`;
-
-  let bandRect = "";
-  if (band && (band.min != null || band.max != null)) {
-    const top = y(Math.min(band.max ?? max, max));
-    const bottom = y(Math.max(band.min ?? min, min));
-    if (bottom - top > 1) {
-      bandRect =
-        `<rect class="band" x="${pad}" y="${top.toFixed(1)}" ` +
-        `width="${innerW}" height="${(bottom - top).toFixed(1)}" />`;
+  let guides = "";
+  if (band) {
+    for (const bound of [band.min, band.max]) {
+      if (bound == null || bound <= min || bound >= max) continue;
+      const at = y(bound).toFixed(1);
+      guides +=
+        `<line class="guide" x1="${pad}" y1="${at}" ` +
+        `x2="${width - pad}" y2="${at}" />`;
     }
   }
 
@@ -156,8 +153,7 @@ function sparkline(values, { band, step = false, width = 116, height = 30 }) {
   return (
     `<svg class="spark" viewBox="0 0 ${width} ${height}" width="${width}" ` +
     `height="${height}" preserveAspectRatio="none" aria-hidden="true">` +
-    bandRect +
-    `<path class="area" d="${area}" />` +
+    guides +
     `<path class="line" d="${line}" />` +
     `<circle class="head" cx="${lastX}" cy="${lastY}" r="2.6" />` +
     `</svg>`
@@ -376,7 +372,6 @@ const STYLES = `
 
   .chart { display: flex; align-items: center; gap: 8px; min-width: 158px; }
   .spark { display: block; overflow: visible; }
-  .spark .area { fill: var(--st, var(--primary-color)); opacity: 0.1; stroke: none; }
   .spark .line {
     fill: none;
     stroke: var(--st, var(--primary-color));
@@ -385,11 +380,15 @@ const STYLES = `
     stroke-linecap: round;
   }
   .spark .head { fill: var(--st, var(--primary-color)); }
-  .spark .band { fill: var(--success-color, #2e9e5b); opacity: 0.1; }
+  .spark .guide {
+    stroke: var(--secondary-text-color);
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+    opacity: 0.45;
+  }
+  /* Deliberately neutral: falling is good for some biomarkers and bad for
+     others, so the arrow states the direction and nothing more. */
   .delta { font-size: 11.5px; white-space: nowrap; color: var(--secondary-text-color); }
-  .delta.up { color: var(--error-color, #db4437); }
-  .delta.down { color: var(--success-color, #2e9e5b); }
-  .delta.flat { color: var(--secondary-text-color); }
 
   .badge {
     display: inline-flex;

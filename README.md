@@ -48,7 +48,7 @@ Configure via the integration's **Configure** button:
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| Update interval (hours) | 1 | How often to poll Ornament. Lab results change rarely, so a longer interval is perfectly fine too. |
+| Update interval (minutes) | 60 | How often to poll Ornament, from 15 minutes up to a week. Lab results change rarely, so a long interval is perfectly fine. |
 | Import measurement history | on | Backfills past results into long-term statistics. Turn off if you only want values recorded from now on. |
 | History attribute size | 20 | How many measurements to expose in the `history` attribute. Set to 0 to omit it. |
 | Biomarker name language | en | Language requested from the Ornament dictionary. |
@@ -96,9 +96,14 @@ automation:
             {{ states('sensor.ornament_nazariy_abnormal_biomarkers') }} biomarkers out of range.
 ```
 
-## Service
+## Syncing on demand
 
-`ornament_health.import_history` — re-fetches everything and re-imports all measurements into long-term statistics. The import is idempotent, so running it repeatedly is safe. Useful after restoring a backup or changing the history option.
+Two buttons sit on the person's device:
+
+- **Sync now** — fetches from Ornament immediately instead of waiting for the next poll, and imports anything new.
+- **Resync all data** — deletes the imported statistics, drops the cached biomarker dictionary, and rebuilds everything from Ornament. This is the way out if stored data ever looks wrong; Ornament is the source of truth, so nothing is lost.
+
+The same two actions are available as the services `ornament_health.import_history` and `ornament_health.resync`, so an automation can trigger them. Both are safe to run repeatedly.
 
 ## Seeing the history
 
