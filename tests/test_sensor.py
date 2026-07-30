@@ -33,7 +33,7 @@ async def test_biomarker_sensors_created(
     """Every biomarker becomes a sensor named from the dictionary."""
     await _setup(hass, config_entry)
 
-    state = hass.states.get("sensor.ornament_test_person_vitamin_d_25_hydroxy")
+    state = hass.states.get("sensor.ornament_test_person_vitamins_vitamin_d_25_hydroxy")
     assert state is not None
     assert state.state == "12.21"
     assert state.attributes["unit_of_measurement"] == "ng/mL"
@@ -51,7 +51,7 @@ async def test_reference_range_converted_to_sensor_unit(
     """Canonical reference ranges are expressed in the unit the lab used."""
     await _setup(hass, config_entry)
 
-    state = hass.states.get("sensor.ornament_test_person_vitamin_d_25_hydroxy")
+    state = hass.states.get("sensor.ornament_test_person_vitamins_vitamin_d_25_hydroxy")
     assert state.attributes["reference_min"] == 20.0
     assert state.attributes["reference_max"] == 80.0
     assert state.attributes["optimal_min"] == 30.0
@@ -66,7 +66,7 @@ async def test_history_converted_when_lab_changes_unit(
     """Older readings are converted into the newest reading's unit."""
     await _setup(hass, config_entry)
 
-    state = hass.states.get("sensor.ornament_test_person_ferritin")
+    state = hass.states.get("sensor.ornament_test_person_anemia_ferritin")
     assert state.state == "200.0"
     assert state.attributes["unit_of_measurement"] == "ng/mL"
     # 1.0 mcg/L canonical == 1.0 / 0.00224719 ng/mL
@@ -86,7 +86,7 @@ async def test_unitless_biomarker(
     """Unitless biomarkers get no unit of measurement."""
     await _setup(hass, config_entry)
 
-    state = hass.states.get("sensor.ornament_test_person_ph_urine")
+    state = hass.states.get("sensor.ornament_test_person_urine_ph_urine")
     assert state.state == "5.0"
     assert "unit_of_measurement" not in state.attributes
 
@@ -99,7 +99,7 @@ async def test_duplicate_timestamps_collapse_to_current_reading(
     """One reading per instant, and it is the one Ornament lists first."""
     await _setup(hass, config_entry)
 
-    state = hass.states.get("sensor.ornament_test_person_prothrombin_time")
+    state = hass.states.get("sensor.ornament_test_person_urine_prothrombin_time")
     assert state.state == "11.5"
     assert state.attributes["measurement_count"] == 2
     assert [point["value"] for point in state.attributes["history"]] == [10.4, 11.5]
@@ -115,7 +115,7 @@ async def test_qualitative_biomarker_reads_as_wording(
     """A qualitative result shows its wording, not the raw 0/1 or the unit."""
     await _setup(hass, config_entry)
 
-    state = hass.states.get("sensor.ornament_test_person_mucus_urine_qualitative")
+    state = hass.states.get("sensor.ornament_test_person_urine_mucus_urine_qualitative")
     assert state.state == "Detected"
     assert "unit_of_measurement" not in state.attributes
     assert state.attributes["device_class"] == "enum"
@@ -139,7 +139,7 @@ async def test_qualitative_biomarker_has_no_statistics(
     await _setup(hass, config_entry)
     await async_wait_recording_done(hass)
 
-    statistic_id = "sensor.ornament_test_person_mucus_urine_qualitative"
+    statistic_id = "sensor.ornament_test_person_urine_mucus_urine_qualitative"
     stats = await hass.async_add_executor_job(
         statistics_during_period,
         hass,
@@ -211,7 +211,7 @@ async def test_biomarkers_are_grouped_into_category_devices(
     assert all(device.via_device_id == profile_device.id for device in panels)
 
     vitamin_d = entity_registry.async_get(
-        "sensor.ornament_test_person_vitamin_d_25_hydroxy"
+        "sensor.ornament_test_person_vitamins_vitamin_d_25_hydroxy"
     )
     assert (
         device_registry.async_get(vitamin_d.device_id).name
@@ -234,7 +234,7 @@ async def test_reference_ranges_are_numeric(
     await _setup(hass, config_entry)
 
     attributes = hass.states.get(
-        "sensor.ornament_test_person_vitamin_d_25_hydroxy"
+        "sensor.ornament_test_person_vitamins_vitamin_d_25_hydroxy"
     ).attributes
     for key in ("reference_min", "reference_max", "optimal_min", "optimal_max"):
         assert isinstance(attributes[key], (int, float))
@@ -251,7 +251,7 @@ async def test_history_imported_into_statistics(
     await _setup(hass, config_entry)
     await async_wait_recording_done(hass)
 
-    statistic_id = "sensor.ornament_test_person_vitamin_d_25_hydroxy"
+    statistic_id = "sensor.ornament_test_person_vitamins_vitamin_d_25_hydroxy"
     stats = await hass.async_add_executor_job(
         statistics_during_period,
         hass,
@@ -277,7 +277,7 @@ async def test_setup_without_recorder(
 ) -> None:
     """Sensors still work when statistics cannot be written."""
     await _setup(hass, config_entry)
-    assert hass.states.get("sensor.ornament_test_person_ferritin") is not None
+    assert hass.states.get("sensor.ornament_test_person_anemia_ferritin") is not None
 
 
 async def test_service_registered(
@@ -300,5 +300,6 @@ async def test_unload(
     assert await hass.config_entries.async_unload(config_entry.entry_id)
     await hass.async_block_till_done()
     assert (
-        hass.states.get("sensor.ornament_test_person_ferritin").state == "unavailable"
+        hass.states.get("sensor.ornament_test_person_anemia_ferritin").state
+        == "unavailable"
     )

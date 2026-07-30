@@ -8,11 +8,12 @@ Pulls every biomarker from an [Ornament Health](https://ornament.health) profile
 
 - **A sensor for every biomarker** on the profile — hemoglobin, ferritin, vitamin D, TSH, cholesterol, and whatever else your lab reports contain. A typical profile yields 100–200 sensors.
 - **Real history.** Lab results are dated when the blood was drawn, often years ago. Home Assistant normally records a sensor only from the moment it is created, so this integration writes every past measurement into long-term statistics. Open any biomarker and the graph shows the whole record, back to your first test.
-- **Reference ranges** for each biomarker as attributes (`reference_min`/`reference_max`, plus the optimal range when Ornament provides one), so an automation can react to a value drifting out of range.
+- **Personalised reference ranges** as numeric attributes on every biomarker (`reference_min`/`reference_max`, plus the optimal range when Ornament provides one), so an automation or a chart can use them directly. Ornament calculates these bounds from the profile's age and sex, and they are converted into the same unit the sensor reports.
 - **Correct units.** Ornament stores each value twice — in a canonical unit and in the unit your lab used. Sensors report the lab's unit, and older measurements are converted into that same unit so a lab switching from mg/dL to mmol/L cannot corrupt the history.
 - **Qualitative results read as words.** Ornament returns urine and stool findings as 0 or 1 with the wording tucked into the unit (`Undetected|Detected`). Those sensors say `Undetected` or `Detected`, not `0.0 Undetected|Detected`, and expose which outcome is normal.
 - **A problem binary sensor** that turns on when anything is flagged abnormal, plus diagnostic sensors for the biomarker count, abnormal count, last lab report date and laboratory name.
-- **One device per person.** Add the integration once per family member; each gets its own device and its own set of entities.
+- **Grouped into lab panels.** Each Ornament category — Complete blood count, Urinalysis, Lipids, Vitamins — becomes its own device linked to the person, so 150 biomarkers browse as a couple of dozen panels instead of one flat list.
+- **One device tree per person.** Add the integration once per family member; each gets its own profile device with its panels beneath it.
 
 ## Installation
 
@@ -57,7 +58,7 @@ Configure via the integration's **Configure** button:
 Each biomarker sensor looks like this:
 
 ```yaml
-sensor.ornament_<person>_vitamin_d_25_hydroxy:
+sensor.ornament_<person>_vitamins_vitamin_d_25_hydroxy:
   state: 12.21
   unit_of_measurement: ng/mL
   attributes:
@@ -68,7 +69,7 @@ sensor.ornament_<person>_vitamin_d_25_hydroxy:
     measured_at: "2026-05-14T09:00:00+00:00"
     measurement_count: 7
     first_measured_at: "2022-01-13T02:00:00+00:00"
-    reference_min: 20.0
+    reference_min: 20.0     # personalised to age and sex, in the sensor's unit
     reference_max: 80.0
     optimal_min: 30.0
     optimal_max: 50.0
@@ -107,7 +108,7 @@ Click any biomarker sensor and the more-info dialog graphs its full record. To p
 type: statistics-graph
 title: Vitamin D
 entities:
-  - sensor.ornament_nazariy_vitamin_d_25_hydroxy
+  - sensor.ornament_nazariy_vitamins_vitamin_d_25_hydroxy
 stat_types:
   - mean
 period: month
