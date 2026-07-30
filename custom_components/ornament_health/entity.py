@@ -9,6 +9,17 @@ from .const import DOMAIN, MANUFACTURER
 from .coordinator import OrnamentCoordinator
 
 
+def profile_device_info(coordinator: OrnamentCoordinator) -> DeviceInfo:
+    """Return the device representing the person themselves."""
+    return DeviceInfo(
+        identifiers={(DOMAIN, coordinator.profile_id)},
+        manufacturer=MANUFACTURER,
+        model="Health profile",
+        name=f"Ornament {coordinator.profile_name}",
+        configuration_url="https://ornament.health",
+    )
+
+
 class OrnamentEntity(CoordinatorEntity[OrnamentCoordinator]):
     """Base entity bound to the device representing one person."""
 
@@ -40,10 +51,4 @@ class OrnamentEntity(CoordinatorEntity[OrnamentCoordinator]):
                 configuration_url="https://ornament.health",
             )
         else:
-            self._attr_device_info = DeviceInfo(
-                identifiers={profile_device},
-                manufacturer=MANUFACTURER,
-                model="Health profile",
-                name=f"Ornament {coordinator.profile_name}",
-                configuration_url="https://ornament.health",
-            )
+            self._attr_device_info = profile_device_info(coordinator)

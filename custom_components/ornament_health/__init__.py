@@ -8,6 +8,7 @@ from datetime import timedelta
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import OrnamentClient
@@ -19,6 +20,7 @@ from .const import (
     SERVICE_IMPORT_HISTORY,
 )
 from .coordinator import OrnamentConfigEntry, OrnamentCoordinator
+from .entity import profile_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +42,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: OrnamentConfigEntry) -> 
 
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
+
+    # Register the person's own device up front: the per-category panels point
+    # at it with via_device, and that link is only recorded if the target
+    # already exists when the panel is created.
+    device_registry.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id, **profile_device_info(coordinator)
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
