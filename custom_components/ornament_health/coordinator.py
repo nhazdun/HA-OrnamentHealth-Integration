@@ -38,6 +38,10 @@ from .statistics import async_clear_statistics
 _LOGGER = logging.getLogger(__name__)
 
 STORAGE_VERSION = 1
+# Bumped whenever the cached dictionary gains a field. A cache written by an
+# older version is simply refetched rather than migrated - it is a copy of a
+# public dictionary, not user data.
+CACHE_SCHEMA = 2
 # Keep at most this many significant digits after converting between units, so a
 # 12.21 ng/mL reading does not surface as 12.209999999999999.
 SIGNIFICANT_DIGITS = 10
@@ -111,7 +115,7 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
     async def _async_load_thesaurus_cache(self) -> None:
         """Restore the cached biomarker dictionary from disk."""
         cached = await self._store.async_load()
-        if not cached:
+        if not cached or cached.get("schema") != CACHE_SCHEMA:
             return
         definitions: dict[int, BiomarkerDefinition] = {}
         for raw_id, item in (cached.get("biomarkers") or {}).items():
@@ -160,6 +164,7 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
         """
         await self._store.async_save(
             {
+                "schema": CACHE_SCHEMA,
                 "digest": self.thesaurus.digest,
                 "biomarkers": {
                     str(biomarker_id): {

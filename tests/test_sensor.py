@@ -414,6 +414,38 @@ async def test_units_fall_back_when_language_has_no_catalogue(
     assert vitamin_d.category == "Вітаміни"
 
 
+async def test_cache_from_an_older_schema_is_discarded(
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+    config_entry: MockConfigEntry,
+) -> None:
+    """A cache written before a field existed is refetched, not reused."""
+    from custom_components.ornament_health.coordinator import STORAGE_VERSION
+
+    store = Store(hass, STORAGE_VERSION, "ornament_health.thesaurus.en")
+    await store.async_save(
+        {
+            # No "schema" key: written by a version that knew nothing of
+            # biomaterials, so the cached entries lack them.
+            "digest": "OLD",
+            "biomarkers": {
+                "187": {
+                    "title": "Vitamin D, 25-Hydroxy",
+                    "category_id": 21,
+                    "is_unitless": False,
+                    "unit_factors": {"56": 2.4773},
+                }
+            },
+            "units": {"56": "ng/mL"},
+            "categories": {"21": "Vitamins"},
+        }
+    )
+
+    await _setup(hass, config_entry)
+
+    assert config_entry.runtime_data.data.biomarkers[187].biomaterial == "Blood"
+
+
 async def test_cache_without_units_is_refetched(
     hass: HomeAssistant,
     mock_api: AiohttpClientMocker,
