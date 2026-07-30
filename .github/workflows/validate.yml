@@ -41,7 +41,8 @@ jobs:
       - name: Run tests
         run: |
           set +e
-          pytest tests/ -v --tb=short > /tmp/pytest.log 2>&1
+          pytest tests/ -q --tb=short --no-header --log-cli-level=CRITICAL \
+            > /tmp/pytest.log 2>&1
           code=$?
           {
             echo '```'
@@ -49,9 +50,8 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           if [ $code -ne 0 ]; then
-            tail -40 /tmp/pytest.log | while IFS= read -r line; do
-              echo "::error::${line}"
-            done
+            grep -E "^(FAILED|ERROR|E  )" /tmp/pytest.log | head -40 |
+              while IFS= read -r line; do echo "::error::${line}"; done
           fi
           cat /tmp/pytest.log
           exit $code
