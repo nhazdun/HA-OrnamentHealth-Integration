@@ -1,0 +1,74 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ornament Health",
+        "description": "Вставте API-токен з вашого акаунта Ornament. Він зберігається лише в Home Assistant і нікуди більше не передається.",
+        "data": {
+          "token": "API-токен"
+        },
+        "data_description": {
+          "token": "Bearer-токен для публічного API Ornament."
+        }
+      },
+      "profile": {
+        "title": "Оберіть людину",
+        "description": "Це профілі, підключені до вашого акаунта Ornament. Щоб додати ще одну людину, додайте інтеграцію ще раз.",
+        "data": {
+          "profile_id": "Людина"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Оновити токен Ornament",
+        "description": "Токен для {name} більше не приймається. Вставте новий.",
+        "data": {
+          "token": "API-токен"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Не вдалося зʼєднатися з API Ornament. Перевірте підключення та спробуйте ще раз.",
+      "invalid_auth": "Ornament відхилив цей токен.",
+      "no_profiles": "До цього токена не привʼязано жодного профілю.",
+      "profile_missing": "Цей токен не має доступу до людини, налаштованої в цьому записі."
+    },
+    "abort": {
+      "already_configured": "Цю людину вже додано.",
+      "reauth_successful": "Токен оновлено."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Налаштування Ornament Health",
+        "data": {
+          "scan_interval_hours": "Інтервал оновлення (години)",
+          "import_history": "Імпортувати історію вимірювань у довготривалу статистику",
+          "history_attribute_limit": "Скільки вимірювань зберігати в атрибуті history",
+          "language": "Мова назв біомаркерів"
+        },
+        "data_description": {
+          "import_history": "Завантажує минулі результати аналізів, щоб графіки показували всю історію, а не лише дані з моменту встановлення.",
+          "history_attribute_limit": "Вкажіть 0, щоб не додавати атрибут history взагалі."
+        }
+      }
+    }
+  },
+  "services": {
+    "import_history": {
+      "name": "Імпортувати історію",
+      "description": "Оновлює дані з Ornament і повторно імпортує всі вимірювання біомаркерів у довготривалу статистику."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "biomarker_count": { "name": "Біомаркерів відстежується" },
+      "abnormal_count": { "name": "Біомаркери поза нормою" },
+      "last_report": { "name": "Останній аналіз" },
+      "last_laboratory": { "name": "Остання лабораторія" }
+    },
+    "binary_sensor": {
+      "abnormal": { "name": "Показники поза нормою" }
+    }
+  }
+}

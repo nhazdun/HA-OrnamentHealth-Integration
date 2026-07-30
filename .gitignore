@@ -1,0 +1,21 @@
+# Never commit API tokens or exported medical data
+*.token
+token.txt
+secrets.yaml
+.env
+*.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Editors / OS
+.DS_Store
+.claude/settings.local.json
+.idea/
+.vscode/

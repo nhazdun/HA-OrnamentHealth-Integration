@@ -1,0 +1,74 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ornament Health",
+        "description": "Paste the API token from your Ornament account. It is stored in Home Assistant only and is never written anywhere else.",
+        "data": {
+          "token": "API token"
+        },
+        "data_description": {
+          "token": "Bearer token for the Ornament public API."
+        }
+      },
+      "profile": {
+        "title": "Choose a person",
+        "description": "These are the profiles linked to your Ornament account. Add the integration again to track another person.",
+        "data": {
+          "profile_id": "Person"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Update the Ornament token",
+        "description": "The token for {name} is no longer accepted. Paste a new one.",
+        "data": {
+          "token": "API token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the Ornament API. Check your connection and try again.",
+      "invalid_auth": "Ornament rejected this token.",
+      "no_profiles": "This token has no linked profiles.",
+      "profile_missing": "This token does not have access to the person configured in this entry."
+    },
+    "abort": {
+      "already_configured": "This person is already set up.",
+      "reauth_successful": "The token was updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ornament Health options",
+        "data": {
+          "scan_interval_hours": "Update interval (hours)",
+          "import_history": "Import measurement history into long-term statistics",
+          "history_attribute_limit": "Measurements kept in the history attribute",
+          "language": "Biomarker name language"
+        },
+        "data_description": {
+          "import_history": "Backfills past lab results so history graphs show every measurement, not just the ones recorded since installation.",
+          "history_attribute_limit": "Set to 0 to leave the history attribute out entirely."
+        }
+      }
+    }
+  },
+  "services": {
+    "import_history": {
+      "name": "Import history",
+      "description": "Refreshes data from Ornament and re-imports every biomarker measurement into long-term statistics."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "biomarker_count": { "name": "Biomarkers tracked" },
+      "abnormal_count": { "name": "Abnormal biomarkers" },
+      "last_report": { "name": "Last lab report" },
+      "last_laboratory": { "name": "Last laboratory" }
+    },
+    "binary_sensor": {
+      "abnormal": { "name": "Abnormal results" }
+    }
+  }
+}
