@@ -137,7 +137,9 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
             },
             digest=cached.get("digest"),
         )
-        self._thesaurus_loaded = bool(definitions)
+        # Units carry both the symbol and the wording of qualitative results, so
+        # a cache without them is incomplete and must be refetched.
+        self._thesaurus_loaded = bool(definitions) and bool(self.thesaurus.units)
 
     async def _async_save_thesaurus_cache(self, needed_ids: set[int]) -> None:
         """Persist only the dictionary entries this profile actually uses.

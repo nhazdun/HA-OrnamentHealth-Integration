@@ -7,6 +7,7 @@ from homeassistant.components.recorder.statistics import statistics_during_perio
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import (
@@ -411,3 +412,38 @@ async def test_units_fall_back_when_language_has_no_catalogue(
     vitamin_d = entry.runtime_data.data.biomarkers[187]
     assert vitamin_d.unit == "ng/mL"
     assert vitamin_d.category == "Вітаміни"
+
+
+async def test_cache_without_units_is_refetched(
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+    config_entry: MockConfigEntry,
+) -> None:
+    """A cached dictionary missing units cannot be trusted."""
+    from custom_components.ornament_health.coordinator import STORAGE_VERSION
+
+    store = Store(hass, STORAGE_VERSION, "ornament_health.thesaurus.en")
+    await store.async_save(
+        {
+            "digest": "STALE",
+            "biomarkers": {
+                "187": {
+                    "title": "Vitamin D, 25-Hydroxy",
+                    "category_id": 21,
+                    "is_unitless": False,
+                    "unit_factors": {"56": 2.4773},
+                }
+            },
+            "units": {},
+            "categories": {},
+        }
+    )
+
+    await _setup(hass, config_entry)
+
+    assert (
+        hass.states.get(
+            "sensor.ornament_test_person_vitamins_vitamin_d_25_hydroxy"
+        ).attributes["unit_of_measurement"]
+        == "ng/mL"
+    )
