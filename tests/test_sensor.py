@@ -202,4 +202,6 @@ async def test_unload(
     await _setup(hass, config_entry)
     assert await hass.config_entries.async_unload(config_entry.entry_id)
     await hass.async_block_till_done()
-    assert hass.states.get("sensor.ornament_test_person_ferritin") is None
+    assert (
+        hass.states.get("sensor.ornament_test_person_ferritin").state == "unavailable"
+    )

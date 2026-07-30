@@ -36,7 +36,7 @@ STORAGE_VERSION = 1
 # Keep at most this many significant digits after converting between units, so a
 # 12.21 ng/mL reading does not surface as 12.209999999999999.
 SIGNIFICANT_DIGITS = 10
-REFERENCE_DIGITS = 4
+REFERENCE_TOLERANCE = 0.001
 
 type OrnamentConfigEntry = ConfigEntry[OrnamentCoordinator]
 
@@ -357,13 +357,25 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
         except (TypeError, ValueError):
             return None, None
         if factor:
-            # Ornament derives its canonical ranges with slightly different
-            # factors than it publishes, so dividing back leaves noise such as
-            # 35.00458 for a 35 g/L limit. Reference ranges are guide rails,
-            # never that precise, so keep four significant digits.
-            low = cls._round(low / factor, REFERENCE_DIGITS)
-            high = cls._round(high / factor, REFERENCE_DIGITS)
+            low = cls._round_reference(low / factor)
+            high = cls._round_reference(high / factor)
         return low, high
+
+    @staticmethod
+    def _round_reference(value: float) -> float:
+        """Return the tidiest number that still means the same limit.
+
+        Ornament derives its canonical ranges with slightly different factors
+        than it publishes, so dividing back leaves noise: a 20-80 ng/mL vitamin D
+        range comes out as 20.0-80.0064. Reference limits are guide rails rather
+        than precise measurements, so take the shortest representation that stays
+        within a tenth of a percent of the converted value.
+        """
+        for digits in range(2, SIGNIFICANT_DIGITS + 1):
+            candidate = float(f"%.{digits}g" % value)
+            if abs(candidate - value) <= abs(value) * REFERENCE_TOLERANCE:
+                return candidate
+        return value
 
     @staticmethod
     def _round(value: float, digits: int = SIGNIFICANT_DIGITS) -> float:
