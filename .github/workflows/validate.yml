@@ -40,16 +40,21 @@ jobs:
       - run: pip install -r requirements-test.txt
       - name: Run tests
         run: |
-          set -o pipefail
-          pytest tests/ -v --tb=short 2>&1 | tee /tmp/pytest.log
-      - name: Publish results
-        if: always()
-        run: |
+          set +e
+          pytest tests/ -v --tb=short > /tmp/pytest.log 2>&1
+          code=$?
           {
             echo '```'
-            tail -150 /tmp/pytest.log
+            cat /tmp/pytest.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ $code -ne 0 ]; then
+            tail -40 /tmp/pytest.log | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+          fi
+          cat /tmp/pytest.log
+          exit $code
 
   ruff:
     name: ruff
