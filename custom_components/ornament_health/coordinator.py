@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .api import (
+    QUALITATIVE_SEPARATOR,
     BiomarkerDefinition,
     OrnamentApiError,
     OrnamentAuthError,
@@ -231,6 +232,13 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
         if not bundled:
             return
 
+        for raw_id, title in (bundled.get("units") or {}).items():
+            current = self.thesaurus.units.get(int(raw_id))
+            # Only qualitative "units" are translated - they spell out the two
+            # outcomes. Measurement units like ng/mL are international and
+            # renaming one would break its statistics.
+            if current and QUALITATIVE_SEPARATOR in current:
+                self.thesaurus.units[int(raw_id)] = title
         for raw_id, title in (bundled.get("categories") or {}).items():
             self.thesaurus.categories[int(raw_id)] = title
         for raw_id, title in (bundled.get("biomarkers") or {}).items():

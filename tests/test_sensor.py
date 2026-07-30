@@ -447,3 +447,29 @@ async def test_cache_without_units_is_refetched(
         ).attributes["unit_of_measurement"]
         == "ng/mL"
     )
+
+
+async def test_qualitative_wording_is_translated(
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+) -> None:
+    """Detected/Undetected read in Ukrainian, while real units stay untouched."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Test Person",
+        unique_id="uk-wording",
+        data={
+            CONF_TOKEN: TOKEN,
+            CONF_PROFILE_ID: PROFILE_ID,
+            CONF_PROFILE_NAME: "Test Person",
+        },
+        options={"language": "uk"},
+    )
+    entry.add_to_hass(hass)
+    await _setup(hass, entry)
+
+    biomarkers = entry.runtime_data.data.biomarkers
+    assert biomarkers[531].options == ["Не виявлено", "Виявлено"]
+    assert biomarkers[531].label(1.0) == "Виявлено"
+    # ng/mL is an international unit and must not be renamed.
+    assert biomarkers[187].unit == "ng/mL"
