@@ -255,9 +255,11 @@ class OrnamentClient:
                 continue
         return units
 
-    async def async_get_categories(self) -> dict[int, str]:
+    async def async_get_categories(self, language: str) -> dict[int, str]:
         """Return the biomarker category dictionary."""
-        payload = await self._request("GET", PATH_BIOMARKER_CATEGORIES)
+        payload = await self._request(
+            "GET", PATH_BIOMARKER_CATEGORIES, params={"lang": language}
+        )
         if not isinstance(payload, list):
             raise OrnamentApiError("Unexpected biomarker-categories payload")
         categories: dict[int, str] = {}

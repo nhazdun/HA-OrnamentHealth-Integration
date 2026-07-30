@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -81,6 +83,9 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
     async def _async_setup(self) -> None:
         """Load the static dictionaries once before the first refresh."""
         await self._async_load_thesaurus_cache()
+        # The cache holds whatever names were current when it was written, so
+        # re-apply the bundled ones in case they were updated since.
+        await self._async_apply_bundled_translations()
 
     async def async_resync(self, *, clear: bool) -> None:
         """Re-read everything from Ornament and rebuild the history.
@@ -180,8 +185,48 @@ class OrnamentCoordinator(DataUpdateCoordinator[OrnamentData]):
         if not self.thesaurus.units:
             self.thesaurus.units = await self.client.async_get_units(self.language)
         if not self.thesaurus.categories:
-            self.thesaurus.categories = await self.client.async_get_categories()
+            self.thesaurus.categories = await self.client.async_get_categories(
+                self.language
+            )
+            if not self.thesaurus.categories and self.language != DEFAULT_LANGUAGE:
+                # Ornament answers with an empty list for languages it has no
+                # catalogue for, which would leave every panel unnamed.
+                self.thesaurus.categories = await self.client.async_get_categories(
+                    DEFAULT_LANGUAGE
+                )
+        await self._async_apply_bundled_translations()
         self._thesaurus_loaded = True
+
+    async def _async_apply_bundled_translations(self) -> None:
+        """Overlay names for languages Ornament does not translate itself.
+
+        Ornament ships Russian, German and Spanish but not Ukrainian, so the
+        titles for those languages are kept in the integration and laid over
+        whatever the API returned.
+        """
+        path = (
+            Path(__file__).parent / "translations" / f"thesaurus.{self.language}.json"
+        )
+
+        def _load() -> dict[str, dict[str, str]]:
+            if not path.is_file():
+                return {}
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                _LOGGER.warning("Could not read bundled translations at %s", path)
+                return {}
+
+        bundled = await self.hass.async_add_executor_job(_load)
+        if not bundled:
+            return
+
+        for raw_id, title in (bundled.get("categories") or {}).items():
+            self.thesaurus.categories[int(raw_id)] = title
+        for raw_id, title in (bundled.get("biomarkers") or {}).items():
+            definition = self.thesaurus.biomarkers.get(int(raw_id))
+            if definition is not None:
+                definition.title = title
 
     async def _async_update_data(self) -> OrnamentData:
         """Fetch the profile's biomarkers and submissions."""

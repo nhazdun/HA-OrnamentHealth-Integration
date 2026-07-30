@@ -78,7 +78,9 @@ async def test_resync_button_clears_then_reimports(
     cleared = clear.call_args.args[1]
     # Numeric biomarkers only - qualitative ones never had statistics.
     assert "sensor.ornament_test_person_vitamins_vitamin_d_25_hydroxy" in cleared
-    assert "sensor.ornament_test_person_urine_mucus_urine_qualitative" not in cleared
+    assert (
+        "sensor.ornament_test_person_urinalysis_mucus_urine_qualitative" not in cleared
+    )
 
     reimported = {call.args[1] for call in import_measurements.call_args_list}
     assert "sensor.ornament_test_person_vitamins_vitamin_d_25_hydroxy" in reimported

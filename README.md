@@ -122,6 +122,29 @@ days_to_show: 2000
 
 Between lab visits the line holds its last value, because that is what the sensor reads until a new result arrives.
 
+## Biomarker table card
+
+[`www/ornament-biomarker-table.js`](www/ornament-biomarker-table.js) is a Lovelace card that puts the whole profile on one screen: a searchable table with one row per biomarker, showing its value, where that value sits inside the reference range, a sparkline of its measurements, and a status badge.
+
+Everything comes from the sensors' own attributes, so the card runs no recorder queries and needs no entity list — it finds every sensor carrying a `biomarker_id` and groups the rows by category.
+
+To install it, copy the file into `config/www/`, add it under **Settings → Dashboards → three-dot menu → Resources** as `/local/ornament-biomarker-table.js` (type: JavaScript module), then give it a full-width view:
+
+```yaml
+type: panel
+title: Biomarkers
+path: biomarkers
+icon: mdi:test-tube
+cards:
+  - type: custom:ornament-biomarker-table
+    title: Biomarker library
+    chart_points: 12   # measurements per sparkline, newest last
+```
+
+Rows are classified from the data the integration already exposes: **concern** when Ornament flags the value out of its reference range, **optimal** when it sits inside the narrower optimal band, **watch** when it clears the reference range but misses that band, and **normal** otherwise. Clicking a row opens the sensor's more-info dialog with its full graph.
+
+The sparkline's vertical scale comes from the measurements alone, and a reference bound is drawn as a dashed guide only when the series actually runs across it. The percentage beside it is the change from the previous measurement, deliberately uncoloured — falling is good for some biomarkers and bad for others.
+
 ## How history works
 
 Home Assistant has two stores: **states** (short-lived, purged after `purge_keep_days`) and **long-term statistics** (hourly, kept forever). Only statistics accept timestamps in the past, so that is where the measurement history goes — each measurement lands in the hour it was actually taken. The sensors carry `state_class: measurement`, so Home Assistant's own graphs read those statistics and show the full record.
@@ -135,7 +158,8 @@ Home Assistant loads integration icons from [home-assistant/brands](https://gith
 ## Notes and limitations
 
 - The Ornament API exposes one token per account; all profiles linked to that account are offered in the picker.
-- Biomarker names come from Ornament's dictionary (~5000 entries, cached locally and refreshed only when Ornament's digest changes). At the time of writing, the dictionary is English-only regardless of the requested language.
+- Biomarker names come from Ornament's dictionary (~5000 entries, cached locally and refreshed only when Ornament's digest changes). Ornament translates it into Russian, German, Spanish, French, Italian and Portuguese.
+- **Ukrainian is not one of them** — Ornament returns English titles and an empty category list for `uk`. The integration therefore ships its own Ukrainian catalogue covering all 107 categories and the biomarkers seen on real profiles; anything it does not cover falls back to the English name. To extend it, add entries to [`translations/thesaurus.uk.json`](custom_components/ornament_health/translations/thesaurus.uk.json).
 - This integration is read-only. It never writes to your Ornament account.
 - Not affiliated with, endorsed by, or supported by Ornament Health. Medical data is shown as reported by your lab and is not medical advice.
 

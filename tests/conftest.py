@@ -59,7 +59,7 @@ BIOMARKERS_PAYLOAD: dict[str, Any] = {
     "biomarkers": [
         {
             "id": 187,
-            "categoryId": 60,
+            "categoryId": 21,
             "isUnitless": False,
             "status": "N",
             "entries": [
@@ -84,7 +84,7 @@ BIOMARKERS_PAYLOAD: dict[str, Any] = {
         {
             # Same biomarker measured in two different units over time.
             "id": 88,
-            "categoryId": 14,
+            "categoryId": 20,
             "isUnitless": False,
             "status": "A",
             "entries": [
@@ -108,7 +108,7 @@ BIOMARKERS_PAYLOAD: dict[str, Any] = {
         },
         {
             "id": 337,
-            "categoryId": 27,
+            "categoryId": 82,
             "isUnitless": True,
             "status": "N",
             "entries": [
@@ -126,7 +126,7 @@ BIOMARKERS_PAYLOAD: dict[str, Any] = {
             # The same report uploaded twice, plus a control value sharing the
             # newest timestamp. Ornament lists its current reading first.
             "id": 226,
-            "categoryId": 27,
+            "categoryId": 82,
             "isUnitless": False,
             "status": "N",
             "entries": [
@@ -159,7 +159,7 @@ BIOMARKERS_PAYLOAD: dict[str, Any] = {
         {
             # Qualitative result: the value is an index into the unit's wording.
             "id": 531,
-            "categoryId": 27,
+            "categoryId": 82,
             "isUnitless": False,
             "status": "A",
             "entries": [
@@ -214,35 +214,35 @@ THESAURUS_PAYLOAD: dict[str, Any] = {
         {
             "id": 187,
             "title": "Vitamin D, 25-Hydroxy",
-            "displayCategoryId": 60,
+            "displayCategoryId": 21,
             "isUnitless": False,
             "unitsFactors": [[56, 2.4773], [34, 1.0]],
         },
         {
             "id": 88,
             "title": "Ferritin",
-            "displayCategoryId": 14,
+            "displayCategoryId": 20,
             "isUnitless": False,
             "unitsFactors": [[56, 0.00224719], [34, 1.0]],
         },
         {
             "id": 337,
             "title": "pH, urine",
-            "displayCategoryId": 27,
+            "displayCategoryId": 82,
             "isUnitless": True,
             "unitsFactors": [[1, 1.0]],
         },
         {
             "id": 226,
             "title": "Prothrombin time",
-            "displayCategoryId": 27,
+            "displayCategoryId": 82,
             "isUnitless": False,
             "unitsFactors": [[61, 1.0]],
         },
         {
             "id": 531,
             "title": "Mucus, urine qualitative",
-            "displayCategoryId": 27,
+            "displayCategoryId": 82,
             "isUnitless": False,
             "unitsFactors": [[1001, 1.0]],
         },
@@ -258,9 +258,9 @@ UNITS_PAYLOAD: list[dict[str, Any]] = [
 ]
 
 CATEGORIES_PAYLOAD: list[dict[str, Any]] = [
-    {"id": 14, "title": "Anemia"},
-    {"id": 27, "title": "Urine"},
-    {"id": 60, "title": "Vitamins"},
+    {"id": 20, "title": "Iron regulatory proteins"},
+    {"id": 21, "title": "Vitamins"},
+    {"id": 82, "title": "Urinalysis"},
 ]
 
 

@@ -14,9 +14,14 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
 )
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
-from custom_components.ornament_health.const import DOMAIN
+from custom_components.ornament_health.const import (
+    CONF_PROFILE_ID,
+    CONF_PROFILE_NAME,
+    CONF_TOKEN,
+    DOMAIN,
+)
 
-from .conftest import DATE_NEW, DATE_OLD, PROFILE_ID
+from .conftest import DATE_NEW, DATE_OLD, PROFILE_ID, TOKEN
 
 
 async def _setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
@@ -66,7 +71,9 @@ async def test_history_converted_when_lab_changes_unit(
     """Older readings are converted into the newest reading's unit."""
     await _setup(hass, config_entry)
 
-    state = hass.states.get("sensor.ornament_test_person_anemia_ferritin")
+    state = hass.states.get(
+        "sensor.ornament_test_person_iron_regulatory_proteins_ferritin"
+    )
     assert state.state == "200.0"
     assert state.attributes["unit_of_measurement"] == "ng/mL"
     # 1.0 mcg/L canonical == 1.0 / 0.00224719 ng/mL
@@ -86,7 +93,7 @@ async def test_unitless_biomarker(
     """Unitless biomarkers get no unit of measurement."""
     await _setup(hass, config_entry)
 
-    state = hass.states.get("sensor.ornament_test_person_urine_ph_urine")
+    state = hass.states.get("sensor.ornament_test_person_urinalysis_ph_urine")
     assert state.state == "5.0"
     assert "unit_of_measurement" not in state.attributes
 
@@ -99,7 +106,7 @@ async def test_duplicate_timestamps_collapse_to_current_reading(
     """One reading per instant, and it is the one Ornament lists first."""
     await _setup(hass, config_entry)
 
-    state = hass.states.get("sensor.ornament_test_person_urine_prothrombin_time")
+    state = hass.states.get("sensor.ornament_test_person_urinalysis_prothrombin_time")
     assert state.state == "11.5"
     assert state.attributes["measurement_count"] == 2
     assert [point["value"] for point in state.attributes["history"]] == [10.4, 11.5]
@@ -115,7 +122,9 @@ async def test_qualitative_biomarker_reads_as_wording(
     """A qualitative result shows its wording, not the raw 0/1 or the unit."""
     await _setup(hass, config_entry)
 
-    state = hass.states.get("sensor.ornament_test_person_urine_mucus_urine_qualitative")
+    state = hass.states.get(
+        "sensor.ornament_test_person_urinalysis_mucus_urine_qualitative"
+    )
     assert state.state == "Detected"
     assert "unit_of_measurement" not in state.attributes
     assert state.attributes["device_class"] == "enum"
@@ -139,7 +148,7 @@ async def test_qualitative_biomarker_has_no_statistics(
     await _setup(hass, config_entry)
     await async_wait_recording_done(hass)
 
-    statistic_id = "sensor.ornament_test_person_urine_mucus_urine_qualitative"
+    statistic_id = "sensor.ornament_test_person_urinalysis_mucus_urine_qualitative"
     stats = await hass.async_add_executor_job(
         statistics_during_period,
         hass,
@@ -206,8 +215,8 @@ async def test_biomarkers_are_grouped_into_category_devices(
     ]
     assert {device.name for device in panels} == {
         "Ornament Test Person Vitamins",
-        "Ornament Test Person Anemia",
-        "Ornament Test Person Urine",
+        "Ornament Test Person Iron regulatory proteins",
+        "Ornament Test Person Urinalysis",
     }
     assert all(device.via_device_id == profile_device.id for device in panels)
 
@@ -278,7 +287,10 @@ async def test_setup_without_recorder(
 ) -> None:
     """Sensors still work when statistics cannot be written."""
     await _setup(hass, config_entry)
-    assert hass.states.get("sensor.ornament_test_person_anemia_ferritin") is not None
+    assert (
+        hass.states.get("sensor.ornament_test_person_iron_regulatory_proteins_ferritin")
+        is not None
+    )
 
 
 async def test_service_registered(
@@ -301,6 +313,34 @@ async def test_unload(
     assert await hass.config_entries.async_unload(config_entry.entry_id)
     await hass.async_block_till_done()
     assert (
-        hass.states.get("sensor.ornament_test_person_anemia_ferritin").state
+        hass.states.get(
+            "sensor.ornament_test_person_iron_regulatory_proteins_ferritin"
+        ).state
         == "unavailable"
     )
+
+
+async def test_ukrainian_names_come_from_the_bundled_dictionary(
+    hass: HomeAssistant,
+    mock_api: AiohttpClientMocker,
+) -> None:
+    """Ornament has no Ukrainian catalogue, so the bundled titles are used."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Test Person",
+        unique_id="uk-profile",
+        data={
+            CONF_TOKEN: TOKEN,
+            CONF_PROFILE_ID: PROFILE_ID,
+            CONF_PROFILE_NAME: "Test Person",
+        },
+        options={"language": "uk"},
+    )
+    entry.add_to_hass(hass)
+    await _setup(hass, entry)
+
+    coordinator = entry.runtime_data
+    assert coordinator.thesaurus.biomarker_title(187) == "Вітамін D, 25-гідрокси"
+    assert coordinator.thesaurus.category_title(21) == "Вітаміни"
+    # Anything the bundle does not cover keeps the name Ornament supplied.
+    assert coordinator.thesaurus.biomarker_title(88) == "Феритин"
